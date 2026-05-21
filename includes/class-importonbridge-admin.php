@@ -17,6 +17,7 @@ final class ImportonBridge_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'maybe_show_app_passwords_notice' ) );
 		add_action( 'admin_post_importonbridge_enable_app_passwords', array( __CLASS__, 'handle_enable_app_passwords' ) );
+		add_action( 'wp_ajax_importonbridge_auto_apppass', array( __CLASS__, 'ajax_auto_apppass' ) );
 	}
 
 	public static function redirect_old_slugs(): void {
@@ -187,6 +188,7 @@ final class ImportonBridge_Admin {
 				'importonbridge_auto_connect',
 				'importonbridgeAutoConnectData',
 				array(
+					'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
 					'siteBaseUrl' => home_url( '/' ),
 					'currentUser' => $user instanceof WP_User ? (string) $user->user_login : '',
 				)
@@ -207,50 +209,6 @@ final class ImportonBridge_Admin {
 		$state        = self::handle_settings_postback();
 		$site_url     = home_url( '/' );
 		$current_user = wp_get_current_user();
-
-		if ( isset( $_GET['importonbridge_app_pw_enabled'] ) ) {
-			echo '<div class="notice notice-success is-dismissible"><p>' . esc_html__( 'Application Passwords enabled. The Chrome extension can now authenticate.', 'importon-bridge' ) . '</p></div>';
-		}
-
-		// Application Password management.
-		$apppass_notice      = '';
-		$apppass_new_plain   = '';
-		$apppass_error       = '';
-		$has_app_passwords   = class_exists( 'WP_Application_Passwords' );
-
-		if ( $has_app_passwords ) {
-			if ( isset( $_POST['importonbridge_create_apppass'] ) && check_admin_referer( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ) ) {
-				$pw_name = isset( $_POST['importonbridge_apppass_name'] ) ? sanitize_text_field( wp_unslash( $_POST['importonbridge_apppass_name'] ) ) : '';
-				if ( $pw_name === '' ) {
-					$apppass_error = __( 'Please enter a name for the Application Password.', 'importon-bridge' );
-				} else {
-					$result = WP_Application_Passwords::create_new_application_password( $current_user->ID, array( 'name' => $pw_name ) );
-					if ( is_wp_error( $result ) ) {
-						$apppass_error = $result->get_error_message();
-					} else {
-						$apppass_new_plain = $result[0];
-						/* translators: %s: Application Password name */
-						$apppass_notice = sprintf( __( 'Application Password created for "%s".', 'importon-bridge' ), esc_html( $pw_name ) );
-					}
-				}
-			}
-			if ( isset( $_POST['importonbridge_revoke_apppass'] ) && check_admin_referer( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ) ) {
-				$uuid = sanitize_text_field( wp_unslash( $_POST['importonbridge_revoke_uuid'] ?? '' ) );
-				if ( $uuid !== '' ) {
-					$del = WP_Application_Passwords::delete_application_password( $current_user->ID, $uuid );
-					$apppass_notice = is_wp_error( $del ) ? $del->get_error_message() : __( 'Application Password revoked.', 'importon-bridge' );
-				}
-			}
-			if ( isset( $_POST['importonbridge_revoke_all_apppass'] ) && check_admin_referer( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ) ) {
-				WP_Application_Passwords::delete_all_application_passwords( $current_user->ID );
-				$apppass_notice = __( 'All Application Passwords revoked.', 'importon-bridge' );
-			}
-		}
-
-		$all_app_passwords = array();
-		if ( $has_app_passwords ) {
-			$all_app_passwords = (array) WP_Application_Passwords::get_user_application_passwords( $current_user->ID );
-		}
 		?>
 		<div class="wrap importonbridge-wrap importonbridge-shell importonbridge-page">
 		<meta name="importonbridge-url-import-bridge" content="1">
@@ -282,83 +240,15 @@ final class ImportonBridge_Admin {
 				<div class="importonbridge-card importonbridge-card--cta" style="margin-bottom:16px;">
 					<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
 						<div>
-							<div style="font-weight:600;font-size:14px;margin-bottom:4px;" id="importonbridge-connect-title">Connect to Extension</div>
-							<div style="color:var(--text-light);font-size:13px;" id="importonbridge-connect-desc">Make sure the extension is installed and loaded on this page.</div>
+							<div style="font-weight:600;font-size:14px;margin-bottom:4px;">Connect to Extension</div>
+							<div style="color:var(--text-light);font-size:13px;">Make sure the extension is installed and loaded on this page.</div>
 						</div>
 						<button type="button" class="importonbridge-btn" id="importonbridge-connect-btn">Connect to Extension</button>
 					</div>
 					<div id="importonbridge-connect-status" style="margin-top:10px;font-size:13px;font-weight:600;min-height:20px;"></div>
 				</div>
 
-				<?php if ( $apppass_notice !== '' ) : ?>
-					<div class="importonbridge-alert importonbridge-alert--success" style="margin-bottom:10px;"><?php echo esc_html( $apppass_notice ); ?></div>
-				<?php endif; ?>
-				<?php if ( $apppass_error !== '' ) : ?>
-					<div class="importonbridge-alert importonbridge-alert--danger" style="margin-bottom:10px;"><?php echo esc_html( $apppass_error ); ?></div>
-				<?php endif; ?>
-				<?php if ( $apppass_new_plain !== '' ) : ?>
-					<div class="importonbridge-alert importonbridge-alert--success" style="margin-bottom:10px;">
-						<strong>Copy this password now — it will not be shown again:</strong><br><br>
-						<code style="font-size:15px;letter-spacing:.08em;"><?php echo esc_html( trim( chunk_split( $apppass_new_plain, 4, ' ' ) ) ); ?></code>
-					</div>
-					<div id="importonbridge-new-apppass-data" style="display:none;" data-password="<?php echo esc_attr( $apppass_new_plain ); ?>" data-username="<?php echo esc_attr( $current_user->user_login ); ?>" data-baseurl="<?php echo esc_attr( home_url( '/' ) ); ?>"></div>
-				<?php endif; ?>
-
-				<form method="post" style="margin-bottom:16px;">
-					<?php wp_nonce_field( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ); ?>
-					<div class="importonbridge-inline-control">
-						<input type="text" name="importonbridge_apppass_name" placeholder="Name" value="" style="flex:1;min-width:180px;" />
-						<button type="submit" name="importonbridge_create_apppass" value="1" class="importonbridge-btn">Add New Application Password</button>
-					</div>
-				</form>
-
-				<?php if ( ! empty( $all_app_passwords ) ) : ?>
-					<div class="importonbridge-table-wrap">
-						<table class="widefat striped importonbridge-table">
-							<thead>
-								<tr>
-									<th>Name</th>
-									<th>Created</th>
-									<th>Last Used</th>
-									<th>Last IP</th>
-									<th></th>
-								</tr>
-							</thead>
-							<tbody>
-								<?php foreach ( $all_app_passwords as $ap ) : ?>
-									<?php
-									$ap_name    = isset( $ap['name'] )      ? (string) $ap['name']      : '—';
-									$ap_uuid    = isset( $ap['uuid'] )      ? (string) $ap['uuid']      : '';
-									$ap_created = isset( $ap['created'] )   ? wp_date( 'Y-m-d H:i', (int) $ap['created'] ) : '—';
-									$ap_last    = isset( $ap['last_used'] ) && $ap['last_used'] ? wp_date( 'Y-m-d H:i', (int) $ap['last_used'] ) : 'Never';
-									$ap_ip      = isset( $ap['last_ip'] )   ? (string) $ap['last_ip']  : '—';
-									?>
-									<tr>
-										<td><strong><?php echo esc_html( $ap_name ); ?></strong></td>
-										<td><?php echo esc_html( $ap_created ); ?></td>
-										<td><?php echo esc_html( $ap_last ); ?></td>
-										<td><?php echo esc_html( $ap_ip ); ?></td>
-										<td>
-											<?php if ( $ap_uuid !== '' ) : ?>
-											<form method="post" style="margin:0;">
-												<?php wp_nonce_field( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ); ?>
-												<input type="hidden" name="importonbridge_revoke_uuid" value="<?php echo esc_attr( $ap_uuid ); ?>" />
-												<button type="submit" name="importonbridge_revoke_apppass" value="1" class="importonbridge-ghost-btn" style="color:#333;" onclick="return confirm('Revoke this Application Password?')">Revoke</button>
-											</form>
-											<?php endif; ?>
-										</td>
-									</tr>
-								<?php endforeach; ?>
-							</tbody>
-						</table>
-					</div>
-					<form method="post" style="margin-top:10px;">
-						<?php wp_nonce_field( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ); ?>
-						<button type="submit" name="importonbridge_revoke_all_apppass" value="1" class="importonbridge-ghost-btn" style="color:#333;" onclick="return confirm('Revoke ALL Application Passwords?')">Revoke All</button>
-					</form>
-				<?php else : ?>
-					<p class="importonbridge-empty-state">No Application Passwords yet. Add one above.</p>
-				<?php endif; ?>
+				<div id="importonbridge-new-apppass-data" style="display:none;"></div>
 			</div>
 			</div>
 			<?php
@@ -1591,5 +1481,36 @@ JS;
 			</div>
 		</div>
 		<?php
+	}
+
+	public static function ajax_auto_apppass(): void {
+		if ( ! current_user_can( 'manage_options' ) ) {
+			wp_send_json_error( array( 'message' => 'Unauthorized.' ) );
+		}
+		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
+			wp_send_json_error( array( 'message' => 'Application Passwords not available.' ) );
+		}
+
+		$current_user = wp_get_current_user();
+		$pw_name      = 'Importon Bridge';
+
+		// Revoke any existing password with this name.
+		$existing = (array) WP_Application_Passwords::get_user_application_passwords( $current_user->ID );
+		foreach ( $existing as $ap ) {
+			if ( isset( $ap['name'] ) && $ap['name'] === $pw_name && isset( $ap['uuid'] ) ) {
+				WP_Application_Passwords::delete_application_password( $current_user->ID, $ap['uuid'] );
+			}
+		}
+
+		$result = WP_Application_Passwords::create_new_application_password( $current_user->ID, array( 'name' => $pw_name ) );
+		if ( is_wp_error( $result ) ) {
+			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
+		}
+
+		wp_send_json_success( array(
+			'password' => $result[0],
+			'username' => $current_user->user_login,
+			'baseUrl'  => home_url( '/' ),
+		) );
 	}
 }
