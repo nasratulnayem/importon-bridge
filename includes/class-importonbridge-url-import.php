@@ -222,12 +222,11 @@ final class ImportonBridge_Url_Import {
 	public static function ajax_create_run(): void {
 		self::assert_ajax_permission();
 
-		$post           = wp_unslash( $_POST );
-		$urls_input     = isset( $post['urls'] ) ? $post['urls'] : array();
-		$category_id    = isset( $post['category_id'] ) ? (int) $post['category_id'] : 0;
-		$source_run_id  = isset( $post['source_run_id'] ) ? sanitize_text_field( (string) $post['source_run_id'] ) : '';
-		$raw_urls       = is_array( $urls_input ) ? array_map( 'sanitize_text_field', $urls_input ) : preg_split( '/[\r\n,]+/', sanitize_text_field( (string) $urls_input ) );
-		$run            = self::create_run( is_array( $raw_urls ) ? $raw_urls : array(), $category_id, $source_run_id );
+		$urls_input    = isset( $_POST['urls'] ) ? $_POST['urls'] : array();
+		$category_id   = isset( $_POST['category_id'] ) ? (int) $_POST['category_id'] : 0;
+		$source_run_id = isset( $_POST['source_run_id'] ) ? sanitize_text_field( wp_unslash( $_POST['source_run_id'] ) ) : '';
+		$raw_urls      = is_array( $urls_input ) ? array_map( 'sanitize_text_field', wp_unslash( $urls_input ) ) : preg_split( '/[\r\n,]+/', sanitize_text_field( wp_unslash( $urls_input ) ) );
+		$run           = self::create_run( is_array( $raw_urls ) ? $raw_urls : array(), $category_id, $source_run_id );
 
 		if ( is_wp_error( $run ) ) {
 			wp_send_json_error( array( 'message' => $run->get_error_message() ), 400 );
@@ -239,9 +238,8 @@ final class ImportonBridge_Url_Import {
 	public static function ajax_update_run(): void {
 		self::assert_ajax_permission();
 
-		$post      = wp_unslash( $_POST );
-		$run_id    = isset( $post['run_id'] ) ? sanitize_text_field( (string) $post['run_id'] ) : '';
-		$event_raw = isset( $post['event'] ) ? sanitize_text_field( (string) $post['event'] ) : '';
+		$run_id    = isset( $_POST['run_id'] ) ? sanitize_text_field( wp_unslash( $_POST['run_id'] ) ) : '';
+		$event_raw = isset( $_POST['event'] ) ? sanitize_text_field( wp_unslash( $_POST['event'] ) ) : '';
 		$event     = json_decode( $event_raw, true );
 		if ( ! is_array( $event ) ) {
 			wp_send_json_error( array( 'message' => 'Invalid event payload.' ), 400 );

@@ -1009,23 +1009,22 @@ JS;
 		$ai_notice = '';
 		$ai_error  = '';
 		$ai_settings = get_option( 'importonbridge_ai_settings', array() );
-		$post = wp_unslash( $_POST );
 		if ( ! is_array( $ai_settings ) ) {
 			$ai_settings = array();
 		}
 
-		if ( isset( $post['importonbridge_save_ai_settings'] ) || isset( $post['importonbridge_test_openai_api'] ) || isset( $post['importonbridge_test_gemini_api'] ) ) {
+		if ( isset( $_POST['importonbridge_save_ai_settings'] ) || isset( $_POST['importonbridge_test_openai_api'] ) || isset( $_POST['importonbridge_test_gemini_api'] ) ) {
 			check_admin_referer( 'importonbridge_save_ai_settings_action', 'importonbridge_save_ai_settings_nonce' );
 
-			$ai_settings = self::build_ai_settings_from_post( $ai_settings, $post );
+			$ai_settings = self::build_ai_settings_from_post( $ai_settings, wp_unslash( $_POST ) );
 
-			if ( isset( $post['importonbridge_save_ai_settings'] ) ) {
+			if ( isset( $_POST['importonbridge_save_ai_settings'] ) ) {
 				update_option( 'importonbridge_ai_settings', $ai_settings );
 				$ai_notice = 'AI settings saved.';
 			}
 
-			if ( isset( $post['importonbridge_test_openai_api'] ) || isset( $post['importonbridge_test_gemini_api'] ) ) {
-				$provider    = isset( $post['importonbridge_test_gemini_api'] ) ? 'gemini' : 'openai';
+			if ( isset( $_POST['importonbridge_test_openai_api'] ) || isset( $_POST['importonbridge_test_gemini_api'] ) ) {
+				$provider    = isset( $_POST['importonbridge_test_gemini_api'] ) ? 'gemini' : 'openai';
 				$test_result = ImportonBridge_Rest::test_ai_provider_connection( $ai_settings, $provider );
 				if ( ! empty( $test_result['ok'] ) ) {
 					$ai_notice = isset( $test_result['message'] ) ? (string) $test_result['message'] : ucfirst( $provider ) . ' connection succeeded.';

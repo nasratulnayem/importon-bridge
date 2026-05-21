@@ -266,22 +266,6 @@ final class ImportonBridge_Rest {
 			)
 		);
 
-		// /pending-connect is intentionally unauthenticated: the Chrome extension calls it
-		// to collect credentials immediately after /connect creates them. At that point the
-		// extension has no credentials yet, so requiring auth would break the bootstrap flow.
-		// Security is provided by: (a) a 48-hex-char (192-bit) cryptographically random token,
-		// (b) token is single-use and deleted on first successful read, (c) 5-minute TTL,
-		// (d) IP binding — the retrieving IP must match the IP that called /connect.
-		register_rest_route(
-			'importonbridge/v1',
-			'/pending-connect',
-			array(
-				'methods'             => 'GET',
-				'permission_callback' => '__return_true',
-				'callback'            => array( __CLASS__, 'handle_pending_connect' ),
-			)
-		);
-
 		// Diagnostics endpoint to help debug auth/header issues from the Chrome extension.
 		// Safe by default: only accessible from localhost (127.0.0.1/::1) or admins.
 		register_rest_route(
@@ -491,99 +475,34 @@ final class ImportonBridge_Rest {
 		public static function handle_connect( WP_REST_Request $request ): WP_REST_Response {
 			nocache_headers();
 
-			if ( ! class_exists( 'WP_Application_Passwords' ) ) {
-				return new WP_REST_Response(
-					array( 'ok' => false, 'error' => 'Application Passwords require WordPress 5.6 or newer.' ),
-					500
-				);
-			}
+			$user_id  = get_current_user_id();
+			$user     = wp_get_current_user();
+			$site_url = rtrim( home_url( '/' ), '/' );
 
-			$user_id = get_current_user_id();
-			$user    = wp_get_current_user();
-
-			// Revoke any existing "Importon Bridge Extension" password so we always return a fresh one.
-			$existing = WP_Application_Passwords::get_user_application_passwords( $user_id );
-			if ( is_array( $existing ) ) {
-				foreach ( $existing as $pw ) {
-					if ( isset( $pw['name'] ) && $pw['name'] === 'Importon Bridge Extension' ) {
-						WP_Application_Passwords::delete_application_password( $user_id, (string) $pw['uuid'] );
+			$has_app_passwords = class_exists( 'WP_Application_Passwords' );
+			$app_pw_available  = false;
+			if ( $has_app_passwords ) {
+				$existing = WP_Application_Passwords::get_user_application_passwords( $user_id );
+				if ( is_array( $existing ) ) {
+					foreach ( $existing as $pw ) {
+						if ( isset( $pw['name'] ) && str_contains( (string) $pw['name'], 'Importon Bridge' ) ) {
+							$app_pw_available = true;
+							break;
+						}
 					}
 				}
 			}
 
-			$result = WP_Application_Passwords::create_new_application_password(
-				$user_id,
-				array(
-					'name'   => 'Importon Bridge Extension',
-					'app_id' => 'importon-bridge',
-				)
-			);
-
-			if ( is_wp_error( $result ) ) {
-				return new WP_REST_Response(
-					array( 'ok' => false, 'error' => $result->get_error_message() ),
-					500
-				);
-			}
-
-			[ $plain_password ] = $result;
-
-			$token      = bin2hex( random_bytes( 24 ) );
-			$origin_ip  = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-
-			set_transient(
-				'importonbridge_pending_connect_' . $token,
-				array(
-					'site_url'     => rtrim( home_url( '/' ), '/' ),
-					'username'     => (string) $user->user_login,
-					'app_password' => (string) $plain_password,
-					'origin_ip'    => $origin_ip,
-				),
-				300
-			);
-
 			return new WP_REST_Response(
 				array(
-					'ok'      => true,
-					'token'   => $token,
-					'site_url'=> rtrim( home_url( '/' ), '/' ),
-				),
-				200
-			);
-		}
-
-		public static function handle_pending_connect( WP_REST_Request $request ): WP_REST_Response {
-			nocache_headers();
-
-			$token = sanitize_text_field( (string) $request->get_param( 'token' ) );
-			if ( $token === '' ) {
-				return new WP_REST_Response( array( 'ok' => false, 'error' => 'Missing token.' ), 400 );
-			}
-
-			$data = get_transient( 'importonbridge_pending_connect_' . $token );
-			if ( ! is_array( $data ) ) {
-				return new WP_REST_Response( array( 'ok' => false, 'error' => 'Token expired or invalid.' ), 404 );
-			}
-
-			// Verify the request comes from the same IP that triggered /connect.
-			// Skipped when origin_ip is empty (old transients) or when behind a reverse proxy
-			// where REMOTE_ADDR may differ from the browser IP.
-			$stored_ip  = isset( $data['origin_ip'] ) ? (string) $data['origin_ip'] : '';
-			$request_ip = isset( $_SERVER['REMOTE_ADDR'] ) ? sanitize_text_field( wp_unslash( $_SERVER['REMOTE_ADDR'] ) ) : '';
-			if ( $stored_ip !== '' && $request_ip !== '' && $stored_ip !== $request_ip ) {
-				// Consume token to prevent replay attempts, then reject.
-				delete_transient( 'importonbridge_pending_connect_' . $token );
-				return new WP_REST_Response( array( 'ok' => false, 'error' => 'Token not valid for this client.' ), 403 );
-			}
-
-			delete_transient( 'importonbridge_pending_connect_' . $token );
-
-			return new WP_REST_Response(
-				array(
-					'ok'           => true,
-					'site_url'     => (string) $data['site_url'],
-					'username'     => (string) $data['username'],
-					'app_password' => (string) $data['app_password'],
+					'ok'                 => true,
+					'logged_in'          => is_user_logged_in(),
+					'capability'         => current_user_can( 'manage_woocommerce' ),
+					'app_passwords'      => $has_app_passwords,
+					'app_pw_created'     => $app_pw_available,
+					'site_url'           => $site_url,
+					'username'           => (string) $user->user_login,
+					'connect_manual_url' => admin_url( 'admin.php?page=importon-bridge' ),
 				),
 				200
 			);
