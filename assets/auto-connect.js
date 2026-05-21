@@ -28,7 +28,7 @@
     var timeout = setTimeout(function () {
       timedOut = true;
       window.removeEventListener('message', handleResponse);
-      statusEl.textContent = 'Failed: Extension did not respond. Make sure it is installed and refresh this page.';
+      statusEl.textContent = 'Failed: Extension did not respond. Make sure it is loaded on this page, then try again.';
       statusEl.style.color = '#dc2626';
       var btn = document.getElementById('importonbridge-connect-btn');
       if (btn) btn.disabled = false;
@@ -44,7 +44,12 @@
       window.removeEventListener('message', handleResponse);
       var btn = document.getElementById('importonbridge-connect-btn');
       if (data.ok === false) {
-        statusEl.textContent = 'Failed: ' + (data.error || 'Bridge rejected the request.');
+        var errMsg = data.error || '';
+        if (/extension context invalidated/i.test(errMsg)) {
+          statusEl.textContent = 'Failed: Extension was reloaded. Please refresh this page and try again.';
+        } else {
+          statusEl.textContent = 'Failed: ' + errMsg;
+        }
         statusEl.style.color = '#dc2626';
         if (btn) btn.disabled = false;
         return;
