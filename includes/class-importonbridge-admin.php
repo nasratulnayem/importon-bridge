@@ -209,6 +209,12 @@ final class ImportonBridge_Admin {
 		$state        = self::handle_settings_postback();
 		$site_url     = home_url( '/' );
 		$current_user = wp_get_current_user();
+
+		$stored_creds = array();
+		if ( $current_user instanceof WP_User && $current_user->ID > 0 ) {
+			$stored_creds = (array) get_user_meta( $current_user->ID, 'importonbridge_creds', true );
+		}
+		$has_stored = ! empty( $stored_creds['password'] ) && ! empty( $stored_creds['username'] ) && ! empty( $stored_creds['base_url'] );
 		?>
 		<div class="wrap importonbridge-wrap importonbridge-shell importonbridge-page">
 		<meta name="importonbridge-url-import-bridge" content="1">
@@ -248,7 +254,7 @@ final class ImportonBridge_Admin {
 					<div id="importonbridge-connect-status" style="margin-top:10px;font-size:13px;font-weight:600;min-height:20px;"></div>
 				</div>
 
-				<div id="importonbridge-new-apppass-data" style="display:none;"></div>
+				<div id="importonbridge-new-apppass-data" style="display:none;"<?php if ( $has_stored ) : ?> data-password="<?php echo esc_attr( $stored_creds['password'] ); ?>" data-username="<?php echo esc_attr( $stored_creds['username'] ); ?>" data-baseurl="<?php echo esc_attr( $stored_creds['base_url'] ); ?>"<?php endif; ?>></div>
 			</div>
 			</div>
 			<?php
@@ -1489,8 +1495,15 @@ JS;
 			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
 		}
 
+		$plain = $result[0];
+		update_user_meta( $current_user->ID, 'importonbridge_creds', array(
+			'password' => $plain,
+			'username' => $current_user->user_login,
+			'base_url' => home_url( '/' ),
+		) );
+
 		wp_send_json_success( array(
-			'password' => $result[0],
+			'password' => $plain,
 			'username' => $current_user->user_login,
 			'baseUrl'  => home_url( '/' ),
 		) );
