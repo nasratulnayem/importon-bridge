@@ -12,7 +12,9 @@
     extensionState: "checking",
     requestSeq: 0,
     bridgeRequests: new Map(),
-    syncChain: Promise.resolve()
+    syncChain: Promise.resolve(),
+    pausedRunId: "",
+    pausedUrl: ""
   };
 
   const statusMap = {
@@ -397,10 +399,42 @@
         state: "error",
         message: payload?.error || "Batch import failed."
       };
+    } else if (progressState === "paused") {
+      state.processing = false;
+      state.pausedRunId = runId;
+      state.pausedUrl = payload?.url || "";
+      event = {
+        type: "state",
+        state: "paused",
+        message: payload?.message || "Robot verification required. Solve it in the opened tab, then click Resume."
+      };
+      updateResumeButton(true);
+    } else if (progressState === "running") {
+      state.processing = true;
+      state.pausedRunId = "";
+      state.pausedUrl = "";
+      event = {
+        type: "state",
+        state: "running",
+        message: payload?.message || "Resumed..."
+      };
+      updateResumeButton(false);
     }
 
     if (event) {
       queueRunEvent(runId, event);
+    }
+  }
+
+  function updateResumeButton(paused) {
+    if (!startBtn) return;
+    if (paused) {
+      startBtn.textContent = "Resume";
+      startBtn.disabled = false;
+      startBtn.dataset.resumeRunId = state.pausedRunId || "";
+    } else {
+      startBtn.textContent = "Start Import";
+      delete startBtn.dataset.resumeRunId;
     }
   }
 
@@ -527,6 +561,20 @@
   }
 
   startBtn.addEventListener("click", async () => {
+    const resumeRunId = startBtn.dataset.resumeRunId || "";
+    if (resumeRunId) {
+      try {
+        startBtn.disabled = true;
+        startBtn.textContent = "Resuming...";
+        await bridgeRequest("resume_url_import_batch", { runId: resumeRunId }, 5000);
+      } catch (error) {
+        startBtn.textContent = "Resume";
+        startBtn.disabled = false;
+        el("importonbridge-run-message").textContent = String(error?.message || "Failed to resume.");
+      }
+      return;
+    }
+
     const urls = normalizeUrls(el("importonbridge-url-import-urls").value);
     const categoryId = Number(el("importonbridge-url-import-category").value || 0);
 
