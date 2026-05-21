@@ -1,8 +1,8 @@
 (function () {
-  const cfg = window.awiUrlImportData || {};
-  const startBtn = document.getElementById("awi-url-import-start");
+  const cfg = window.importonbridgeUrlImportData || {};
+  const startBtn = document.getElementById("importonbridge-url-import-start");
   if (!startBtn) return;
-  const clearRunsBtn = document.getElementById("awi-url-import-clear-runs");
+  const clearRunsBtn = document.getElementById("importonbridge-url-import-clear-runs");
 
   const state = {
     currentRun: cfg.latestRun && typeof cfg.latestRun === "object" ? cfg.latestRun : null,
@@ -87,7 +87,7 @@
   }
 
   function renderCategories() {
-    const select = el("awi-url-import-category");
+    const select = el("importonbridge-url-import-category");
     const categories = Array.isArray(cfg.categories) ? cfg.categories : [];
     const currentCategoryId = isNumericId(state.currentRun?.category_id) ? Number(state.currentRun.category_id) : 0;
 
@@ -109,16 +109,16 @@
   function updateButtons() {
     const failedItems = Array.isArray(state.currentRun?.failed_items) ? state.currentRun.failed_items : [];
     startBtn.disabled = !!state.processing;
-    el("awi-url-import-retry").disabled = !!state.processing || failedItems.length === 0;
+    el("importonbridge-url-import-retry").disabled = !!state.processing || failedItems.length === 0;
     if (clearRunsBtn) {
       clearRunsBtn.disabled = !!state.processing || state.recentRuns.length === 0;
     }
   }
 
   function setExtensionStatus(message, kind = "checking") {
-    const box = el("awi-url-import-extension-box");
-    const pill = el("awi-url-import-extension-pill");
-    const text = el("awi-url-import-extension-status");
+    const box = el("importonbridge-url-import-extension-box");
+    const pill = el("importonbridge-url-import-extension-pill");
+    const text = el("importonbridge-url-import-extension-status");
     const defs = {
       checking: { tone: "neutral", label: "Checking" },
       ready: { tone: "success", label: "Ready" },
@@ -131,11 +131,11 @@
     state.extensionState = kind;
     if (box) {
       box.dataset.tone = meta.tone;
-      box.classList.toggle("awi-note-box--hidden", kind === "ready");
+      box.classList.toggle("importonbridge-note-box--hidden", kind === "ready");
     }
     if (pill) {
       pill.textContent = meta.label;
-      pill.className = `awi-status-pill awi-status-pill--${meta.tone}`;
+      pill.className = `importonbridge-status-pill importonbridge-status-pill--${meta.tone}`;
     }
     if (text) {
       text.textContent = String(message || "");
@@ -143,18 +143,18 @@
   }
 
   function setLogLink(run) {
-    const link = el("awi-url-import-log-link");
+    const link = el("importonbridge-url-import-log-link");
     const url = String(run?.log_url || "").trim();
     if (!link || link.tagName !== "A") return;
     link.href = url || "#";
   }
 
   function renderFailedItems(run) {
-    const body = el("awi-url-import-failed-body");
+    const body = el("importonbridge-url-import-failed-body");
     if (!body) return;
     const items = Array.isArray(run?.failed_items) ? run.failed_items : [];
     if (!items.length) {
-      body.innerHTML = '<tr><td colspan="3" class="awi-empty-state">No failed URLs for the selected run.</td></tr>';
+      body.innerHTML = '<tr><td colspan="3" class="importonbridge-empty-state">No failed URLs for the selected run.</td></tr>';
       return;
     }
 
@@ -191,31 +191,54 @@
   }
 
   function renderRecentRuns() {
-    const body = el("awi-url-import-runs-body");
+    const body = el("importonbridge-url-import-runs-body");
     if (!state.recentRuns.length) {
-      body.innerHTML = '<tr><td colspan="7" class="awi-empty-state">No import runs yet.</td></tr>';
+      body.innerHTML = '<div class="importonbridge-empty-state">No import runs yet.</div>';
       return;
     }
 
     body.innerHTML = state.recentRuns
       .map((run) => {
         const failedCount = Number(run.failed || 0);
+        const status = humanStatus(run.status);
+        const statusClass = status === "Completed" ? "importonbridge-status-success" : (status === "Failed" || status === "Completed With Errors" ? "importonbridge-status-danger" : (status === "Running" ? "importonbridge-status-running" : "importonbridge-status-pending"));
         const logCell = failedCount > 0 && run.log_url
-          ? `<a href="${escapeHtml(run.log_url)}" target="_blank" rel="noopener">failed-log.txt</a>`
-          : "—";
+          ? `<a href="${escapeHtml(run.log_url)}" target="_blank" rel="noopener" class="importonbridge-log-link">View</a>`
+          : '<span style="color:#94a3b8;">—</span>';
+        const successCount = Number(run.success || 0);
+        const failedDisplay = failedCount > 0 ? `<span style="color:#dc2626;font-weight:600;">${failedCount}</span>` : "0";
+        const successDisplay = successCount > 0 ? `<span style="color:#16a34a;font-weight:600;">${successCount}</span>` : "0";
         return [
-          "<tr>",
-          `<td data-label="Run">${escapeHtml(run.id || "")}</td>`,
-          `<td data-label="Category">${escapeHtml(run.category_path || "")}</td>`,
-          `<td data-label="Status">${escapeHtml(humanStatus(run.status))}</td>`,
-          `<td data-label="Total">${escapeHtml(run.total || 0)}</td>`,
-          `<td data-label="Success">${escapeHtml(run.success || 0)}</td>`,
-          `<td data-label="Failed">${escapeHtml(run.failed || 0)}</td>`,
-          `<td data-label="Log">${logCell}</td>`,
-          "</tr>"
+          "<div class=\"importonbridge-run-row\">",
+          `<div class="importonbridge-run-col importonbridge-run-id" title="${escapeHtml(run.id || "")}">${escapeHtml(run.id || "")}</div>`,
+          `<div class="importonbridge-run-col importonbridge-run-category">${escapeHtml(run.category_path || "")}</div>`,
+          `<div class="importonbridge-run-col importonbridge-run-status"><span class="importonbridge-status-badge ${statusClass}">${status}</span></div>`,
+          `<div class="importonbridge-run-col importonbridge-run-total">${escapeHtml(run.total || 0)}</div>`,
+          `<div class="importonbridge-run-col importonbridge-run-success">${successDisplay}</div>`,
+          `<div class="importonbridge-run-col importonbridge-run-failed">${failedDisplay}</div>`,
+          `<div class="importonbridge-run-col importonbridge-run-log">${logCell}</div>`,
+          "</div>"
         ].join("");
       })
       .join("");
+  }
+
+  function statusDotColor(status) {
+    const s = String(status || "").trim();
+    if (s === "completed") return "#16a34a";
+    if (s === "completed_with_errors") return "#d97706";
+    if (s === "running") return "#2563eb";
+    if (s === "failed" || s === "stopped") return "#dc2626";
+    return "#94a3b8";
+  }
+
+  function statusTextColor(status) {
+    const s = String(status || "").trim();
+    if (s === "completed") return "#16a34a";
+    if (s === "completed_with_errors") return "#d97706";
+    if (s === "running") return "#2563eb";
+    if (s === "failed" || s === "stopped") return "#dc2626";
+    return "#64748b";
   }
 
   function renderRun(run) {
@@ -224,14 +247,23 @@
     const success = Number(run?.success || 0);
     const failed = Number(run?.failed || 0);
     const pct = total > 0 ? Math.max(0, Math.min(100, Math.round((processed / total) * 100))) : 0;
+    const statusStr = humanStatus(run?.status);
+    const statusKey = String(run?.status || "").trim();
+    const dotColor = statusDotColor(statusKey);
+    const txtColor = statusTextColor(statusKey);
 
-    el("awi-run-status").textContent = humanStatus(run?.status);
-    el("awi-run-total").textContent = String(total);
-    el("awi-run-processed").textContent = String(processed);
-    el("awi-run-success").textContent = String(success);
-    el("awi-run-failed").textContent = String(failed);
-    el("awi-run-progress-bar").style.width = `${pct}%`;
-    el("awi-run-message").textContent = String(run?.latest_message || "No run started yet.");
+    const statusEl = el("importonbridge-run-status");
+    if (statusEl) {
+      statusEl.style.color = txtColor;
+      statusEl.innerHTML = '<span style="width:8px;height:8px;background:' + dotColor + ';border-radius:50%;display:inline-block;"></span> ' + statusStr;
+    }
+
+    el("importonbridge-run-total").textContent = String(total);
+    el("importonbridge-run-processed").textContent = String(processed);
+    el("importonbridge-run-success").textContent = String(success);
+    el("importonbridge-run-failed").textContent = String(failed);
+    el("importonbridge-run-progress-bar").style.width = `${pct}%`;
+    el("importonbridge-run-message").textContent = String(run?.latest_message || "No run started yet.");
 
     setLogLink(run);
     renderFailedItems(run);
@@ -247,7 +279,7 @@
 
   async function refreshRecentRuns() {
     try {
-      const data = await ajax("awi_url_import_recent_runs");
+      const data = await ajax("importonbridge_url_import_recent_runs");
       if (Array.isArray(data.runs)) {
         state.recentRuns = data.runs;
         renderRecentRuns();
@@ -259,16 +291,16 @@
 
   function bridgeRequest(cmd, payload = {}, timeoutMs = 8000) {
     return new Promise((resolve, reject) => {
-      const requestId = `awi_bridge_${Date.now()}_${++state.requestSeq}`;
+      const requestId = `importonbridge_bridge_${Date.now()}_${++state.requestSeq}`;
       const timer = window.setTimeout(() => {
         state.bridgeRequests.delete(requestId);
-        reject(new Error("ATW extension did not respond. Make sure it is installed, enabled, and allowed on this site."));
+        reject(new Error("Importon Bridge extension did not respond. Make sure it is installed, enabled, and allowed on this site."));
       }, timeoutMs);
 
       state.bridgeRequests.set(requestId, { resolve, reject, timer });
       window.postMessage(
         {
-          type: "AWI_URL_IMPORT_BRIDGE_REQUEST",
+          type: "IMPORTONBRIDGE_URL_IMPORT_BRIDGE_REQUEST",
           requestId,
           cmd,
           payload
@@ -291,7 +323,7 @@
       if (isInvalidatedBridgeError(data?.error)) {
         state.bridgeReady = false;
       }
-      request.reject(new Error(data?.error || "ATW extension request failed."));
+      request.reject(new Error(data?.error || "Importon Bridge extension request failed."));
       return;
     }
 
@@ -301,7 +333,7 @@
   function queueRunEvent(runId, event) {
     state.syncChain = state.syncChain
       .then(async () => {
-        const data = await ajax("awi_url_import_update_run", {
+        const data = await ajax("importonbridge_url_import_update_run", {
           run_id: runId,
           event: JSON.stringify(event)
         });
@@ -316,7 +348,7 @@
       })
       .catch((error) => {
         state.processing = false;
-        el("awi-run-message").textContent = String(error?.message || error);
+        el("importonbridge-run-message").textContent = String(error?.message || error);
         updateButtons();
       });
 
@@ -375,7 +407,7 @@
   window.addEventListener("message", (evt) => {
     if (evt.source !== window || evt.origin !== window.location.origin) return;
     const data = evt.data || {};
-    if (data?.type === "AWI_URL_IMPORT_BRIDGE_READY") {
+    if (data?.type === "IMPORTONBRIDGE_URL_IMPORT_BRIDGE_READY") {
       state.bridgeReady = true;
       if (state.extensionState !== "ready") {
         window.setTimeout(() => {
@@ -384,17 +416,17 @@
       }
       return;
     }
-    if (data?.type === "AWI_URL_IMPORT_BRIDGE_RESPONSE") {
+    if (data?.type === "IMPORTONBRIDGE_URL_IMPORT_BRIDGE_RESPONSE") {
       onBridgeResponse(data);
       return;
     }
-    if (data?.type === "AWI_URL_IMPORT_BRIDGE_EVENT") {
+    if (data?.type === "IMPORTONBRIDGE_URL_IMPORT_BRIDGE_EVENT") {
       onBridgeEvent(data?.event, data?.payload || {});
     }
   });
 
   async function updateExtensionStatus({ attempts = 4, delayMs = 700 } = {}) {
-    setExtensionStatus("Checking the ATW extension bridge on this admin tab...", "checking");
+    setExtensionStatus("Checking the Importon Bridge extension bridge on this admin tab...", "checking");
 
     let lastError = null;
     for (let attempt = 1; attempt <= attempts; attempt += 1) {
@@ -406,7 +438,7 @@
         const currentBase = String(cfg.siteBaseUrl || "").replace(/\/+$/, "");
         if (!configured) {
           setExtensionStatus(
-            "Extension detected, but the saved WordPress credentials are incomplete. Open ATW settings in the extension and save the site URL, username, and Application Password.",
+            "Extension detected, but the saved WordPress credentials are incomplete. Open Importon Bridge settings in the extension and save the site URL, username, and Application Password.",
             "incomplete"
           );
           return false;
@@ -421,7 +453,7 @@
         if (!status?.authOk) {
           const reason = status?.authError ? ` (${status.authError})` : "";
           setExtensionStatus(
-            `Extension credentials failed authentication${reason}. Open ATW extension settings, re-enter the Application Password, then click Test Connection to save.`,
+            `Extension credentials failed authentication${reason}. Open Importon Bridge extension settings, re-enter the Application Password, then click Test Connection to save.`,
             "auth_failed"
           );
           return false;
@@ -440,10 +472,10 @@
     }
 
     const fallback = isInvalidatedBridgeError(lastError)
-      ? "The ATW extension was reloaded or updated after this admin tab was opened. Click Refresh Extension Status, or reload this wp-admin tab once to reconnect the bridge."
+      ? "The Importon Bridge extension was reloaded or updated after this admin tab was opened. Click Refresh Extension Status, or reload this wp-admin tab once to reconnect the bridge."
       : !state.bridgeReady
-      ? "The ATW extension bridge is not loaded on this admin tab yet. Click Refresh Extension Status, open the ATW extension once on this tab, or reload the page."
-      : String(lastError?.message || lastError || "ATW extension is unavailable on this admin page.");
+      ? "The Importon Bridge extension bridge is not loaded on this admin tab yet. Click Refresh Extension Status, open the Importon Bridge extension once on this tab, or reload the page."
+      : String(lastError?.message || lastError || "Importon Bridge extension is unavailable on this admin page.");
     setExtensionStatus(fallback, "unavailable");
     return false;
   }
@@ -458,10 +490,10 @@
   async function startBatch(urls, categoryId, sourceRunId = "") {
     const extensionReady = await ensureExtensionReady();
     if (!extensionReady) {
-      throw new Error("The ATW extension is not ready on this admin tab. Refresh the status, then try again.");
+      throw new Error("The Importon Bridge extension is not ready on this admin tab. Refresh the status, then try again.");
     }
 
-    const created = await ajax("awi_url_import_create_run", {
+    const created = await ajax("importonbridge_url_import_create_run", {
       urls: urls.join("\n"),
       category_id: String(categoryId),
       source_run_id: sourceRunId
@@ -495,15 +527,15 @@
   }
 
   startBtn.addEventListener("click", async () => {
-    const urls = normalizeUrls(el("awi-url-import-urls").value);
-    const categoryId = Number(el("awi-url-import-category").value || 0);
+    const urls = normalizeUrls(el("importonbridge-url-import-urls").value);
+    const categoryId = Number(el("importonbridge-url-import-category").value || 0);
 
     if (!urls.length) {
-      el("awi-run-message").textContent = "Paste at least one Alibaba product URL.";
+      el("importonbridge-run-message").textContent = "Paste at least one Alibaba product URL.";
       return;
     }
     if (!categoryId) {
-      el("awi-run-message").textContent = "Select a WooCommerce category first.";
+      el("importonbridge-run-message").textContent = "Select a WooCommerce category first.";
       return;
     }
 
@@ -511,12 +543,12 @@
       await startBatch(urls, categoryId, "");
     } catch (error) {
       state.processing = false;
-      el("awi-run-message").textContent = String(error?.message || error);
+      el("importonbridge-run-message").textContent = String(error?.message || error);
       updateButtons();
     }
   });
 
-  el("awi-url-import-retry").addEventListener("click", async () => {
+  el("importonbridge-url-import-retry").addEventListener("click", async () => {
     const failedItems = Array.isArray(state.currentRun?.failed_items) ? state.currentRun.failed_items : [];
     const urls = failedItems.map((item) => String(item?.url || "").trim()).filter(Boolean);
     const categoryId = Number(state.currentRun?.category_id || 0);
@@ -529,12 +561,12 @@
       await startBatch(urls, categoryId, String(state.currentRun?.id || ""));
     } catch (error) {
       state.processing = false;
-      el("awi-run-message").textContent = String(error?.message || error);
+      el("importonbridge-run-message").textContent = String(error?.message || error);
       updateButtons();
     }
   });
 
-  el("awi-url-import-extension-refresh")?.addEventListener("click", async () => {
+  el("importonbridge-url-import-extension-refresh")?.addEventListener("click", async () => {
     await updateExtensionStatus({ attempts: 3, delayMs: 500 });
   });
 
@@ -543,17 +575,17 @@
     if (state.processing || !state.recentRuns.length) {
       return;
     }
-    if (!window.confirm("Clear all recent ATW import runs?")) {
+    if (!window.confirm("Clear all recent Importon Bridge import runs?")) {
       return;
     }
 
     try {
       clearRunsBtn.disabled = true;
-      await ajax("awi_url_import_clear_runs");
+      await ajax("importonbridge_url_import_clear_runs");
       state.recentRuns = [];
       resetRunView();
     } catch (error) {
-      el("awi-run-message").textContent = String(error?.message || error);
+      el("importonbridge-run-message").textContent = String(error?.message || error);
       updateButtons();
     }
   });
