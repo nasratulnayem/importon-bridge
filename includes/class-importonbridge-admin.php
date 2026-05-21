@@ -172,6 +172,26 @@ final class ImportonBridge_Admin {
 
 			wp_add_inline_script( 'importonbridge_url_import_admin', self::get_quota_js() );
 		}
+
+		if ( in_array( $hook_suffix, array( self::$hook_suffix, self::$url_import_hook_suffix ), true ) ) {
+			wp_enqueue_script(
+				'importonbridge_auto_connect',
+				plugin_dir_url( IMPORTONBRIDGE_PLUGIN_FILE ) . 'assets/auto-connect.js',
+				array(),
+				IMPORTONBRIDGE_VERSION,
+				true
+			);
+
+			$user = wp_get_current_user();
+			wp_localize_script(
+				'importonbridge_auto_connect',
+				'importonbridgeAutoConnectData',
+				array(
+					'siteBaseUrl' => home_url( '/' ),
+					'currentUser' => $user instanceof WP_User ? (string) $user->user_login : '',
+				)
+			);
+		}
 	}
 
 	public static function render_legacy_redirect(): void {
@@ -269,6 +289,7 @@ final class ImportonBridge_Admin {
 					<strong>Copy this password now — it will not be shown again:</strong><br><br>
 					<code style="font-size:15px;letter-spacing:.08em;"><?php echo esc_html( trim( chunk_split( $apppass_new_plain, 4, ' ' ) ) ); ?></code>
 				</div>
+				<div id="importonbridge-new-apppass-data" style="display:none;" data-password="<?php echo esc_attr( $apppass_new_plain ); ?>" data-username="<?php echo esc_attr( $current_user->user_login ); ?>" data-baseurl="<?php echo esc_attr( home_url( '/' ) ); ?>"></div>
 			<?php endif; ?>
 
 			<form method="post" style="margin-bottom:16px;">
@@ -737,26 +758,26 @@ final class ImportonBridge_Admin {
 						</div>
 					</div>
 
-					<div style="display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:16px;min-width:0;">
-						<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;min-width:0;">
-							<div style="font-size:11px;color:#64748b;font-weight:500;text-transform:uppercase;margin-bottom:4px;overflow-wrap:break-word;">Status</div>
-							<div style="font-size:15px;font-weight:700;color:#64748b;display:flex;align-items:center;justify-content:center;gap:6px;min-width:0;" id="importonbridge-run-status"><span style="width:8px;height:8px;background:#94a3b8;border-radius:50%;display:inline-block;flex-shrink:0;"></span> Ready</div>
+					<div class="importonbridge-run-stats-grid">
+						<div class="importonbridge-stat-box importonbridge-stat-box--status">
+							<div class="importonbridge-stat-label">Status</div>
+							<div style="font-size:13px;font-weight:600;color:#64748b;display:flex;align-items:center;justify-content:center;gap:6px;flex-wrap:wrap;" id="importonbridge-run-status"><span style="width:8px;height:8px;background:#94a3b8;border-radius:50%;display:inline-block;flex-shrink:0;"></span>&nbsp;Ready</div>
 						</div>
-						<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;min-width:0;">
-							<div style="font-size:11px;color:#64748b;font-weight:500;text-transform:uppercase;margin-bottom:4px;overflow-wrap:break-word;">Total</div>
-							<div style="font-size:18px;font-weight:700;color:#1e293b;" id="importonbridge-run-total">0</div>
+						<div class="importonbridge-stat-box">
+							<div class="importonbridge-stat-label">Total</div>
+							<div class="importonbridge-stat-value" id="importonbridge-run-total" style="font-size:22px;">0</div>
 						</div>
-						<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;min-width:0;">
-							<div style="font-size:11px;color:#64748b;font-weight:500;text-transform:uppercase;margin-bottom:4px;overflow-wrap:break-word;">Processed</div>
-							<div style="font-size:18px;font-weight:700;color:#1e293b;" id="importonbridge-run-processed">0</div>
+						<div class="importonbridge-stat-box">
+							<div class="importonbridge-stat-label">Processed</div>
+							<div class="importonbridge-stat-value" id="importonbridge-run-processed" style="font-size:22px;">0</div>
 						</div>
-						<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;min-width:0;">
-							<div style="font-size:11px;color:#64748b;font-weight:500;text-transform:uppercase;margin-bottom:4px;overflow-wrap:break-word;">Success</div>
-							<div style="font-size:18px;font-weight:700;color:#16a34a;" id="importonbridge-run-success">0</div>
+						<div class="importonbridge-stat-box">
+							<div class="importonbridge-stat-label">Success</div>
+							<div class="importonbridge-stat-value" id="importonbridge-run-success" style="font-size:22px;">0</div>
 						</div>
-						<div style="background:#fff;border:1px solid #e2e8f0;border-radius:8px;padding:12px;text-align:center;min-width:0;">
-							<div style="font-size:11px;color:#64748b;font-weight:500;text-transform:uppercase;margin-bottom:4px;overflow-wrap:break-word;">Failed</div>
-							<div style="font-size:18px;font-weight:700;color:#dc2626;" id="importonbridge-run-failed">0</div>
+						<div class="importonbridge-stat-box">
+							<div class="importonbridge-stat-label">Failed</div>
+							<div class="importonbridge-stat-value" id="importonbridge-run-failed" style="font-size:22px;">0</div>
 						</div>
 					</div>
 
@@ -1278,7 +1299,8 @@ JS;
 				'.importonbridge-run-status-meta { display: grid; gap: 6px; }',
 				'.importonbridge-run-status-value { font-size: 28px; line-height: 1.1; font-weight: 600; color: var(--text); word-break: break-word; }',
 				'.importonbridge-run-status-text { margin: 0; color: var(--text-light); line-height: 1.4; }',
-				'.importonbridge-run-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; }',
+				'.importonbridge-run-stats-grid { display: grid; grid-template-columns: repeat(2, 1fr); gap: 12px; margin-bottom: 16px; }',
+				'.importonbridge-run-stats-grid .importonbridge-stat-box--status { grid-column: 1 / -1; }',
 				'.importonbridge-stat { background: #fff; border: 1px solid var(--border); border-radius: 8px; padding: 14px; }',
 				'.importonbridge-stat--compact .importonbridge-stat-value { font-size: 22px; }',
 				'.importonbridge-stat-label { color: var(--text-light); font-size: 11px; font-weight: 500; text-transform: uppercase; letter-spacing: 0.05em; }',
@@ -1330,7 +1352,7 @@ JS;
 				/* Tablet - 1080px */
 				'@media (max-width: 1080px) { .importonbridge-overview-grid, .importonbridge-panel-grid, .importonbridge-grid--tables, .importonbridge-grid--import, .importonbridge-hero, .importonbridge-ai-summary { grid-template-columns: 1fr; } .importonbridge-ai-summary { grid-template-columns: repeat(2, 1fr); } .importonbridge-ai-summary-item { border-right: 0; border-bottom: 1px solid var(--border); } .importonbridge-ai-summary-item:nth-last-child(-n+2) { border-bottom: 0; } .importonbridge-hero--settings .importonbridge-hero-side { justify-content: flex-start; } .importonbridge-hero-actions { justify-content: flex-start; } .importonbridge-grid--import { grid-template-columns: 1fr; } }',
 				/* Small Tablet / Large Mobile - 782px */
-				'@media (max-width: 782px) { .importonbridge-wrap { margin: 12px auto; padding-bottom: 100px; } .importonbridge-wrap.importonbridge-shell { padding-right: 8px; padding-left: 8px; } .importonbridge-card { padding: 16px; } .importonbridge-hero { padding: 16px; border-radius: 8px; grid-template-columns: 1fr; gap: 12px; } .importonbridge-hero-copy h1 { font-size: 18px; } .importonbridge-hero-copy p { font-size: 12px; } .importonbridge-hero-side { width: 100%; } .importonbridge-hero-side .importonbridge-btn { width: 100%; justify-content: center; } .importonbridge-kv, .importonbridge-form, .importonbridge-form-inline, .importonbridge-info-grid, .importonbridge-run-stats-grid { grid-template-columns: 1fr; } .importonbridge-k { padding-top: 0; font-size: 14px; } .importonbridge-btn, .importonbridge-copy, .importonbridge-ghost-btn { width: 100%; justify-content: center; } .importonbridge-btn-row { display: grid; grid-template-columns: 1fr; gap: 8px; } .importonbridge-pass-row { align-items: stretch; flex-direction: column; } .importonbridge-pass code { width: 100%; } .importonbridge-ai-summary { grid-template-columns: 1fr 1fr; } .importonbridge-form-inline { grid-template-columns: 1fr; } .importonbridge-field-actions { width: 100%; } .importonbridge-btn-row .importonbridge-btn { width: 100%; } }',
+				'@media (max-width: 782px) { .importonbridge-wrap { margin: 12px auto; padding-bottom: 100px; } .importonbridge-wrap.importonbridge-shell { padding-right: 8px; padding-left: 8px; } .importonbridge-card { padding: 16px; } .importonbridge-hero { padding: 16px; border-radius: 8px; grid-template-columns: 1fr; gap: 12px; } .importonbridge-hero-copy h1 { font-size: 18px; } .importonbridge-hero-copy p { font-size: 12px; } .importonbridge-hero-side { width: 100%; } .importonbridge-hero-side .importonbridge-btn { width: 100%; justify-content: center; } .importonbridge-kv, .importonbridge-form, .importonbridge-form-inline, .importonbridge-info-grid { grid-template-columns: 1fr; } .importonbridge-k { padding-top: 0; font-size: 14px; } .importonbridge-btn, .importonbridge-copy, .importonbridge-ghost-btn { width: 100%; justify-content: center; } .importonbridge-btn-row { display: grid; grid-template-columns: 1fr; gap: 8px; } .importonbridge-pass-row { align-items: stretch; flex-direction: column; } .importonbridge-pass code { width: 100%; } .importonbridge-ai-summary { grid-template-columns: 1fr 1fr; } .importonbridge-form-inline { grid-template-columns: 1fr; } .importonbridge-field-actions { width: 100%; } .importonbridge-btn-row .importonbridge-btn { width: 100%; } }',
 				/* Mobile - 480px */
 				'@media (max-width: 480px) { .importonbridge-wrap { margin: 8px auto; padding-bottom: 80px; } .importonbridge-hero { padding: 14px; } .importonbridge-hero-copy h1 { font-size: 16px; } .importonbridge-card { padding: 12px; border-radius: 6px; } .importonbridge-card-head { flex-direction: column; gap: 8px; } .importonbridge-card-head h2 { font-size: 14px; } .importonbridge-card-head p { font-size: 12px; } .importonbridge-ai-summary { grid-template-columns: 1fr; } .importonbridge-ai-summary-item { padding: 10px 12px; } .importonbridge-ai-summary-label { font-size: 9px; } .importonbridge-ai-summary-value { font-size: 13px; } .importonbridge-accordion summary { padding: 12px; flex-wrap: wrap; } .importonbridge-accordion-title { font-size: 13px; } .importonbridge-accordion-meta { font-size: 11px; width: 100%; } .importonbridge-kv { grid-template-columns: 1fr; gap: 8px; } .importonbridge-v { width: 100%; } .importonbridge-form { grid-template-columns: 1fr; } .importonbridge-status-pill { font-size: 10px; padding: 3px 8px; } .importonbridge-stat { padding: 10px; } .importonbridge-stat-label { font-size: 10px; } .importonbridge-stat-value { font-size: 20px; } .importonbridge-table-wrap { font-size: 12px; } .importonbridge-table th, .importonbridge-table td { padding: 8px; } .importonbridge-field input, .importonbridge-field textarea, .importonbridge-field select, .importonbridge-v input, .importonbridge-v textarea { font-size: 13px; padding: 8px 10px; } .importonbridge-field-help { font-size: 11px; } .importonbridge-btn, .importonbridge-copy, .importonbridge-ghost-btn { font-size: 12px; padding: 10px 12px; min-height: 40px; } .importonbridge-note-box { padding: 10px; font-size: 12px; } .importonbridge-help-tooltip { width: 200px; font-size: 11px; } }',
 				/* Fix WordPress admin footer overlap */
