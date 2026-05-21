@@ -23,15 +23,35 @@
     statusEl.style.color = '#666';
 
     var requestId = 'importonbridge_connect_' + Date.now() + '_' + Math.random().toString(36).slice(2, 8);
+    var timedOut = false;
+
+    var timeout = setTimeout(function () {
+      timedOut = true;
+      window.removeEventListener('message', handleResponse);
+      statusEl.textContent = 'Failed: Extension did not respond. Make sure it is installed and refresh this page.';
+      statusEl.style.color = '#dc2626';
+      var btn = document.getElementById('importonbridge-connect-btn');
+      if (btn) btn.disabled = false;
+    }, 5000);
 
     function handleResponse(evt) {
+      if (timedOut) return;
       if (evt.source !== window || evt.origin !== window.location.origin) return;
       var data = evt.data || {};
       if (data.type !== 'IMPORTONBRIDGE_URL_IMPORT_BRIDGE_RESPONSE') return;
       if (data.requestId !== requestId) return;
+      clearTimeout(timeout);
       window.removeEventListener('message', handleResponse);
+      var btn = document.getElementById('importonbridge-connect-btn');
+      if (data.ok === false) {
+        statusEl.textContent = 'Failed: ' + (data.error || 'Bridge rejected the request.');
+        statusEl.style.color = '#dc2626';
+        if (btn) btn.disabled = false;
+        return;
+      }
       statusEl.textContent = 'Connected';
       statusEl.style.color = '#16a34a';
+      if (btn) btn.disabled = false;
     }
 
     window.addEventListener('message', handleResponse);
@@ -46,11 +66,6 @@
         wpAppPassword: password || ''
       }
     }, window.location.origin);
-
-    setTimeout(function () {
-      statusEl.textContent = 'Connected';
-      statusEl.style.color = '#16a34a';
-    }, 2000);
   }
 
   function init() {
@@ -96,6 +111,7 @@
                 statusEl.textContent = 'Failed: ' + (json.data?.message || 'Unknown error');
                 statusEl.style.color = '#dc2626';
               }
+              connectBtn.disabled = false;
             }
           })
           .catch(function (err) {
@@ -103,8 +119,6 @@
               statusEl.textContent = 'Failed: ' + String(err.message || err);
               statusEl.style.color = '#dc2626';
             }
-          })
-          .finally(function () {
             connectBtn.disabled = false;
           });
         }

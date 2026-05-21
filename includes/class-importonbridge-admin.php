@@ -586,7 +586,6 @@ final class ImportonBridge_Admin {
 				</div>
 				<div class="importonbridge-hero-side">
 					<div class="importonbridge-hero-actions">
-						<button type="button" class="importonbridge-ghost-btn" id="importonbridge-url-import-extension-refresh">Refresh Extension Status</button>
 						<a class="importonbridge-ghost-btn" href="<?php echo esc_url( admin_url( 'admin.php?page=importon-bridge' ) ); ?>">Settings</a>
 					</div>
 				</div>
@@ -631,21 +630,6 @@ final class ImportonBridge_Admin {
 				</div>
 
 				<div class="importonbridge-card importonbridge-card--section">
-					<div class="importonbridge-card-head">
-						<div>
-							<h2>Extension Status</h2>
-							<p>Importon Bridge extension status on this admin tab</p>
-						</div>
-						<span class="importonbridge-status-pill" id="importonbridge-url-import-extension-pill" style="background:#111827;color:#fff;font-weight:600;padding:6px 12px;border-radius:6px;">Checking</span>
-					</div>
-
-					<div class="importonbridge-extension-box" style="background:linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);border:1px solid #e2e8f0;border-radius:10px;padding:16px;margin-bottom:16px;">
-						<div style="display:flex;align-items:center;gap:12px;">
-							<span id="importonbridge-url-import-extension-status" style="font-size:14px;color:#334155;font-weight:500;">Checking Importon Bridge extension...</span>
-						</div>
-					</div>
-
-					<div style="margin-bottom:16px;">
 						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
 							<span style="font-size:13px;font-weight:600;color:#475569;">Latest Failed Log</span>
 							<a id="importonbridge-url-import-log-link" href="<?php echo ! empty( $latest_run['log_url'] ) ? esc_url( $latest_run['log_url'] ) : '#'; ?>" target="_blank" rel="noopener" style="font-size:12px;color:#2563eb;text-decoration:none;">View Log →</a>
@@ -1494,7 +1478,6 @@ JS;
 		$current_user = wp_get_current_user();
 		$pw_name      = 'Importon Bridge';
 
-		// Revoke any existing password with this name.
 		$existing = (array) WP_Application_Passwords::get_user_application_passwords( $current_user->ID );
 		foreach ( $existing as $ap ) {
 			if ( isset( $ap['name'] ) && $ap['name'] === $pw_name && isset( $ap['uuid'] ) ) {

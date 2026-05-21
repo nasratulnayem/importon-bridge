@@ -9,7 +9,6 @@
     recentRuns: Array.isArray(cfg.recentRuns) ? cfg.recentRuns.slice() : [],
     processing: false,
     bridgeReady: false,
-    extensionState: "checking",
     requestSeq: 0,
     bridgeRequests: new Map(),
     syncChain: Promise.resolve(),
@@ -114,33 +113,6 @@
     el("importonbridge-url-import-retry").disabled = !!state.processing || failedItems.length === 0;
     if (clearRunsBtn) {
       clearRunsBtn.disabled = !!state.processing || state.recentRuns.length === 0;
-    }
-  }
-
-  function setExtensionStatus(message, kind = "checking") {
-    const box = el("importonbridge-url-import-extension-box");
-    const pill = el("importonbridge-url-import-extension-pill");
-    const text = el("importonbridge-url-import-extension-status");
-    const defs = {
-      checking: { tone: "neutral", label: "Checking" },
-      ready: { tone: "success", label: "Ready" },
-      incomplete: { tone: "warning", label: "Setup" },
-      mismatch: { tone: "warning", label: "Wrong Site" },
-      unavailable: { tone: "danger", label: "Disconnected" }
-    };
-    const meta = defs[kind] || defs.checking;
-
-    state.extensionState = kind;
-    if (box) {
-      box.dataset.tone = meta.tone;
-      box.classList.toggle("importonbridge-note-box--hidden", kind === "ready");
-    }
-    if (pill) {
-      pill.textContent = meta.label;
-      pill.className = `importonbridge-status-pill importonbridge-status-pill--${meta.tone}`;
-    }
-    if (text) {
-      text.textContent = String(message || "");
     }
   }
 
@@ -443,11 +415,6 @@
     const data = evt.data || {};
     if (data?.type === "IMPORTONBRIDGE_URL_IMPORT_BRIDGE_READY") {
       state.bridgeReady = true;
-      if (state.extensionState !== "ready") {
-        window.setTimeout(() => {
-          updateExtensionStatus({ attempts: 2, delayMs: 400 });
-        }, 120);
-      }
       return;
     }
     if (data?.type === "IMPORTONBRIDGE_URL_IMPORT_BRIDGE_RESPONSE") {
@@ -459,74 +426,7 @@
     }
   });
 
-  async function updateExtensionStatus({ attempts = 4, delayMs = 700 } = {}) {
-    setExtensionStatus("Checking the Importon Bridge extension bridge on this admin tab...", "checking");
-
-    let lastError = null;
-    for (let attempt = 1; attempt <= attempts; attempt += 1) {
-      try {
-        const status = await bridgeRequest("get_url_import_bridge_status", {}, 5000);
-        state.bridgeReady = true;
-        const configured = !!status?.configured;
-        const savedBase = String(status?.wpBaseUrl || "").trim();
-        const currentBase = String(cfg.siteBaseUrl || "").replace(/\/+$/, "");
-        if (!configured) {
-          setExtensionStatus(
-            "Extension detected, but the saved WordPress credentials are incomplete. Open Importon Bridge settings in the extension and save the site URL, username, and Application Password.",
-            "incomplete"
-          );
-          return false;
-        }
-        if (savedBase && savedBase !== currentBase) {
-          setExtensionStatus(
-            `Extension detected, but the saved site is ${savedBase} while this dashboard is ${currentBase}. Update the extension settings before starting the batch.`,
-            "mismatch"
-          );
-          return false;
-        }
-        if (!status?.authOk) {
-          const reason = status?.authError ? ` (${status.authError})` : "";
-          setExtensionStatus(
-            `Extension credentials failed authentication${reason}. Open Importon Bridge extension settings, re-enter the Application Password, then click Test Connection to save.`,
-            "auth_failed"
-          );
-          return false;
-        }
-        setExtensionStatus("Extension detected and ready.", "ready");
-        return true;
-      } catch (error) {
-        lastError = error;
-        if (isInvalidatedBridgeError(error)) {
-          state.bridgeReady = false;
-        }
-        if (attempt < attempts) {
-          await new Promise((resolve) => window.setTimeout(resolve, delayMs));
-        }
-      }
-    }
-
-    const fallback = isInvalidatedBridgeError(lastError)
-      ? "The Importon Bridge extension was reloaded or updated after this admin tab was opened. Click Refresh Extension Status, or reload this wp-admin tab once to reconnect the bridge."
-      : !state.bridgeReady
-      ? "The Importon Bridge extension bridge is not loaded on this admin tab yet. Click Refresh Extension Status, open the Importon Bridge extension once on this tab, or reload the page."
-      : String(lastError?.message || lastError || "Importon Bridge extension is unavailable on this admin page.");
-    setExtensionStatus(fallback, "unavailable");
-    return false;
-  }
-
-  async function ensureExtensionReady() {
-    if (state.extensionState === "ready") {
-      return true;
-    }
-    return updateExtensionStatus({ attempts: 3, delayMs: 600 });
-  }
-
   async function startBatch(urls, categoryId, sourceRunId = "") {
-    const extensionReady = await ensureExtensionReady();
-    if (!extensionReady) {
-      throw new Error("The Importon Bridge extension is not ready on this admin tab. Refresh the status, then try again.");
-    }
-
     const created = await ajax("importonbridge_url_import_create_run", {
       urls: urls.join("\n"),
       category_id: String(categoryId),
@@ -614,11 +514,6 @@
     }
   });
 
-  el("importonbridge-url-import-extension-refresh")?.addEventListener("click", async () => {
-    await updateExtensionStatus({ attempts: 3, delayMs: 500 });
-  });
-
-
   clearRunsBtn?.addEventListener("click", async () => {
     if (state.processing || !state.recentRuns.length) {
       return;
@@ -638,14 +533,7 @@
     }
   });
 
-  document.addEventListener("visibilitychange", () => {
-    if (!document.hidden) {
-      updateExtensionStatus({ attempts: 2, delayMs: 400 }).catch(() => {});
-    }
-  });
-
   renderCategories();
   renderRun(state.currentRun);
   refreshRecentRuns();
-  updateExtensionStatus().catch(() => {});
 })();
