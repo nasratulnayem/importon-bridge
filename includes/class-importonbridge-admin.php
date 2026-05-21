@@ -630,10 +630,9 @@ final class ImportonBridge_Admin {
 				</div>
 
 				<div class="importonbridge-card importonbridge-card--section">
-						<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
-							<span style="font-size:13px;font-weight:600;color:#475569;">Latest Failed Log</span>
-							<a id="importonbridge-url-import-log-link" href="<?php echo ! empty( $latest_run['log_url'] ) ? esc_url( $latest_run['log_url'] ) : '#'; ?>" target="_blank" rel="noopener" style="font-size:12px;color:#2563eb;text-decoration:none;">View Log →</a>
-						</div>
+					<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+						<span style="font-size:13px;font-weight:600;color:#475569;">Latest Failed Log</span>
+						<a id="importonbridge-url-import-log-link" href="<?php echo ! empty( $latest_run['log_url'] ) ? esc_url( $latest_run['log_url'] ) : '#'; ?>" target="_blank" rel="noopener" style="font-size:12px;color:#2563eb;text-decoration:none;">View Log →</a>
 					</div>
 
 					<div class="importonbridge-card-head importonbridge-card-head--compact" style="margin-top:8px;margin-bottom:12px;">
