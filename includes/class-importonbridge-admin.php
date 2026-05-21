@@ -88,8 +88,8 @@ final class ImportonBridge_Admin {
 		// Settings submenu (same as parent page)
 		add_submenu_page(
 			'importon-bridge',
-			__( 'Settings', 'importon-bridge' ),
-			__( 'Settings', 'importon-bridge' ),
+			__( 'Connect', 'importon-bridge' ),
+			__( 'Connect', 'importon-bridge' ),
 			$cap,
 			'importon-bridge',
 			array( __CLASS__, 'render_page' )
@@ -254,100 +254,111 @@ final class ImportonBridge_Admin {
 		?>
 		<div class="wrap importonbridge-wrap importonbridge-shell importonbridge-page">
 		<meta name="importonbridge-url-import-bridge" content="1">
-			<div class="importonbridge-hero importonbridge-hero--settings">
-				<div class="importonbridge-hero-copy">
-					<h1><?php esc_html_e( 'Importon Bridge', 'importon-bridge' ); ?></h1>
-					<p>Download the extension and create Application Passwords from below then Copy the Base URL, Username and password into the extension settings.</p>
-				</div>
-				<div class="importonbridge-hero-side">
-					<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-btn-download">
-						<svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="2" x2="8" y2="11"/><polyline points="4,8 8,12 12,8"/><line x1="2" y1="14" x2="14" y2="14"/></svg>
-						Download Extension
-					</a>
-				</div>
+			<div class="importonbridge-connect-top">
+				<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-download-link" id="importonbridge-download-link">Download Extension</a>
 			</div>
 
-			<div class="importonbridge-info-grid" style="margin-bottom:16px;">
-				<div class="importonbridge-info-item">
-					<span class="importonbridge-info-label">WordPress Base URL</span>
-					<code><?php echo esc_html( rtrim( $site_url, '/' ) ); ?></code>
+			<div class="importonbridge-connect-hero" id="importonbridge-download-hero">
+				<div class="importonbridge-connect-hero-icon">
+					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 				</div>
-				<div class="importonbridge-info-item">
-					<span class="importonbridge-info-label">Username</span>
-					<code><?php echo esc_html( $current_user->user_login ); ?></code>
-				</div>
+				<h2>Download the Extension</h2>
+				<p>Get the Chrome extension to start importing products from Alibaba.</p>
+				<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-btn-primary" id="importonbridge-download-btn">Download Extension</a>
 			</div>
 
-			<?php if ( $apppass_notice !== '' ) : ?>
-				<div class="importonbridge-alert importonbridge-alert--success" style="margin-bottom:10px;"><?php echo esc_html( $apppass_notice ); ?></div>
-			<?php endif; ?>
-			<?php if ( $apppass_error !== '' ) : ?>
-				<div class="importonbridge-alert importonbridge-alert--danger" style="margin-bottom:10px;"><?php echo esc_html( $apppass_error ); ?></div>
-			<?php endif; ?>
-			<?php if ( $apppass_new_plain !== '' ) : ?>
-				<div class="importonbridge-alert importonbridge-alert--success" style="margin-bottom:10px;">
-					<strong>Copy this password now — it will not be shown again:</strong><br><br>
-					<code style="font-size:15px;letter-spacing:.08em;"><?php echo esc_html( trim( chunk_split( $apppass_new_plain, 4, ' ' ) ) ); ?></code>
+			<div class="importonbridge-connect-main" id="importonbridge-main-section" style="display:none;">
+				<div class="importonbridge-info-grid" style="margin-bottom:16px;">
+					<div class="importonbridge-info-item">
+						<span class="importonbridge-info-label">WordPress Base URL</span>
+						<code><?php echo esc_html( rtrim( $site_url, '/' ) ); ?></code>
+					</div>
+					<div class="importonbridge-info-item">
+						<span class="importonbridge-info-label">Username</span>
+						<code><?php echo esc_html( $current_user->user_login ); ?></code>
+					</div>
 				</div>
-				<div id="importonbridge-new-apppass-data" style="display:none;" data-password="<?php echo esc_attr( $apppass_new_plain ); ?>" data-username="<?php echo esc_attr( $current_user->user_login ); ?>" data-baseurl="<?php echo esc_attr( home_url( '/' ) ); ?>"></div>
-			<?php endif; ?>
 
-			<form method="post" style="margin-bottom:16px;">
-				<?php wp_nonce_field( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ); ?>
-				<div class="importonbridge-inline-control">
-					<input type="text" name="importonbridge_apppass_name" placeholder="Name" value="" style="flex:1;min-width:180px;" />
-					<button type="submit" name="importonbridge_create_apppass" value="1" class="importonbridge-btn">Add New Application Password</button>
+				<div class="importonbridge-card importonbridge-card--cta" style="margin-bottom:16px;">
+					<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+						<div>
+							<div style="font-weight:600;font-size:14px;margin-bottom:4px;" id="importonbridge-connect-title">Connect to Extension</div>
+							<div style="color:var(--text-light);font-size:13px;" id="importonbridge-connect-desc">Make sure the extension is installed and loaded on this page.</div>
+						</div>
+						<button type="button" class="importonbridge-btn" id="importonbridge-connect-btn">Connect to Extension</button>
+					</div>
+					<div id="importonbridge-connect-status" style="margin-top:10px;font-size:13px;font-weight:600;min-height:20px;"></div>
 				</div>
-			</form>
 
-			<?php if ( ! empty( $all_app_passwords ) ) : ?>
-				<div class="importonbridge-table-wrap">
-					<table class="widefat striped importonbridge-table">
-						<thead>
-							<tr>
-								<th>Name</th>
-								<th>Created</th>
-								<th>Last Used</th>
-								<th>Last IP</th>
-								<th></th>
-							</tr>
-						</thead>
-						<tbody>
-							<?php foreach ( $all_app_passwords as $ap ) : ?>
-								<?php
-								$ap_name    = isset( $ap['name'] )      ? (string) $ap['name']      : '—';
-								$ap_uuid    = isset( $ap['uuid'] )      ? (string) $ap['uuid']      : '';
-								$ap_created = isset( $ap['created'] )   ? wp_date( 'Y-m-d H:i', (int) $ap['created'] ) : '—';
-								$ap_last    = isset( $ap['last_used'] ) && $ap['last_used'] ? wp_date( 'Y-m-d H:i', (int) $ap['last_used'] ) : 'Never';
-								$ap_ip      = isset( $ap['last_ip'] )   ? (string) $ap['last_ip']  : '—';
-								?>
-								<tr>
-									<td><strong><?php echo esc_html( $ap_name ); ?></strong></td>
-									<td><?php echo esc_html( $ap_created ); ?></td>
-									<td><?php echo esc_html( $ap_last ); ?></td>
-									<td><?php echo esc_html( $ap_ip ); ?></td>
-									<td>
-										<?php if ( $ap_uuid !== '' ) : ?>
-										<form method="post" style="margin:0;">
-											<?php wp_nonce_field( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ); ?>
-											<input type="hidden" name="importonbridge_revoke_uuid" value="<?php echo esc_attr( $ap_uuid ); ?>" />
-											<button type="submit" name="importonbridge_revoke_apppass" value="1" class="importonbridge-ghost-btn" style="color:#333;" onclick="return confirm('Revoke this Application Password?')">Revoke</button>
-										</form>
-										<?php endif; ?>
-									</td>
-								</tr>
-							<?php endforeach; ?>
-						</tbody>
-					</table>
-				</div>
-				<form method="post" style="margin-top:10px;">
+				<?php if ( $apppass_notice !== '' ) : ?>
+					<div class="importonbridge-alert importonbridge-alert--success" style="margin-bottom:10px;"><?php echo esc_html( $apppass_notice ); ?></div>
+				<?php endif; ?>
+				<?php if ( $apppass_error !== '' ) : ?>
+					<div class="importonbridge-alert importonbridge-alert--danger" style="margin-bottom:10px;"><?php echo esc_html( $apppass_error ); ?></div>
+				<?php endif; ?>
+				<?php if ( $apppass_new_plain !== '' ) : ?>
+					<div class="importonbridge-alert importonbridge-alert--success" style="margin-bottom:10px;">
+						<strong>Copy this password now — it will not be shown again:</strong><br><br>
+						<code style="font-size:15px;letter-spacing:.08em;"><?php echo esc_html( trim( chunk_split( $apppass_new_plain, 4, ' ' ) ) ); ?></code>
+					</div>
+					<div id="importonbridge-new-apppass-data" style="display:none;" data-password="<?php echo esc_attr( $apppass_new_plain ); ?>" data-username="<?php echo esc_attr( $current_user->user_login ); ?>" data-baseurl="<?php echo esc_attr( home_url( '/' ) ); ?>"></div>
+				<?php endif; ?>
+
+				<form method="post" style="margin-bottom:16px;">
 					<?php wp_nonce_field( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ); ?>
-					<button type="submit" name="importonbridge_revoke_all_apppass" value="1" class="importonbridge-ghost-btn" style="color:#333;" onclick="return confirm('Revoke ALL Application Passwords?')">Revoke All</button>
+					<div class="importonbridge-inline-control">
+						<input type="text" name="importonbridge_apppass_name" placeholder="Name" value="" style="flex:1;min-width:180px;" />
+						<button type="submit" name="importonbridge_create_apppass" value="1" class="importonbridge-btn">Add New Application Password</button>
+					</div>
 				</form>
-			<?php else : ?>
-				<p class="importonbridge-empty-state">No Application Passwords yet. Add one above.</p>
-			<?php endif; ?>
 
+				<?php if ( ! empty( $all_app_passwords ) ) : ?>
+					<div class="importonbridge-table-wrap">
+						<table class="widefat striped importonbridge-table">
+							<thead>
+								<tr>
+									<th>Name</th>
+									<th>Created</th>
+									<th>Last Used</th>
+									<th>Last IP</th>
+									<th></th>
+								</tr>
+							</thead>
+							<tbody>
+								<?php foreach ( $all_app_passwords as $ap ) : ?>
+									<?php
+									$ap_name    = isset( $ap['name'] )      ? (string) $ap['name']      : '—';
+									$ap_uuid    = isset( $ap['uuid'] )      ? (string) $ap['uuid']      : '';
+									$ap_created = isset( $ap['created'] )   ? wp_date( 'Y-m-d H:i', (int) $ap['created'] ) : '—';
+									$ap_last    = isset( $ap['last_used'] ) && $ap['last_used'] ? wp_date( 'Y-m-d H:i', (int) $ap['last_used'] ) : 'Never';
+									$ap_ip      = isset( $ap['last_ip'] )   ? (string) $ap['last_ip']  : '—';
+									?>
+									<tr>
+										<td><strong><?php echo esc_html( $ap_name ); ?></strong></td>
+										<td><?php echo esc_html( $ap_created ); ?></td>
+										<td><?php echo esc_html( $ap_last ); ?></td>
+										<td><?php echo esc_html( $ap_ip ); ?></td>
+										<td>
+											<?php if ( $ap_uuid !== '' ) : ?>
+											<form method="post" style="margin:0;">
+												<?php wp_nonce_field( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ); ?>
+												<input type="hidden" name="importonbridge_revoke_uuid" value="<?php echo esc_attr( $ap_uuid ); ?>" />
+												<button type="submit" name="importonbridge_revoke_apppass" value="1" class="importonbridge-ghost-btn" style="color:#333;" onclick="return confirm('Revoke this Application Password?')">Revoke</button>
+											</form>
+											<?php endif; ?>
+										</td>
+									</tr>
+								<?php endforeach; ?>
+							</tbody>
+						</table>
+					</div>
+					<form method="post" style="margin-top:10px;">
+						<?php wp_nonce_field( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' ); ?>
+						<button type="submit" name="importonbridge_revoke_all_apppass" value="1" class="importonbridge-ghost-btn" style="color:#333;" onclick="return confirm('Revoke ALL Application Passwords?')">Revoke All</button>
+					</form>
+				<?php else : ?>
+					<p class="importonbridge-empty-state">No Application Passwords yet. Add one above.</p>
+				<?php endif; ?>
 			</div>
 			</div>
 			<?php
@@ -1370,6 +1381,17 @@ JS;
 				'@media (min-width: 600px) { .importonbridge-stats-row { grid-template-columns: repeat(2, 1fr); } }',
 				'@media (min-width: 1080px) { .importonbridge-stats-row { grid-template-columns: repeat(4, 1fr); } }',
 				'@media (max-width: 480px) { .importonbridge-stats-row .importonbridge-stat-box { padding: 12px; } .importonbridge-stats-row .importonbridge-stat-box > div:first-child { font-size: 10px; } .importonbridge-stats-row .importonbridge-stat-box > div:last-child { font-size: 22px; } }',
+				/* Connect page */
+				'.importonbridge-connect-top { display: flex; justify-content: flex-end; margin-bottom: 12px; }',
+				'.importonbridge-download-link { font-size: 13px; font-weight: 600; color: #666; text-decoration: none; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; }',
+				'.importonbridge-download-link:hover { color: #333; border-color: var(--border-strong); background: #fafafa; }',
+				'.importonbridge-connect-hero { text-align: center; padding: 48px 24px; margin-bottom: 24px; border: 1px dashed var(--border); border-radius: 12px; background: #fff; }',
+				'.importonbridge-connect-hero-icon { color: #999; margin-bottom: 16px; }',
+				'.importonbridge-connect-hero h2 { margin: 0 0 8px; font-size: 22px; font-weight: 600; color: var(--text); }',
+				'.importonbridge-connect-hero p { margin: 0 0 20px; color: var(--text-light); font-size: 14px; }',
+				'.importonbridge-btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; text-decoration: none; border: 1px solid #333; background: #222; color: #fff; }',
+				'.importonbridge-btn-primary:hover { background: #333; color: #fff; }',
+				'.importonbridge-connect-main { margin-top: 0; }',
 				/* Pulse animation for running status */
 				'@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } }',
 			)
