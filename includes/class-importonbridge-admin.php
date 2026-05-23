@@ -16,7 +16,6 @@ final class ImportonBridge_Admin {
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'maybe_show_app_passwords_notice' ) );
 		add_action( 'admin_post_importonbridge_enable_app_passwords', array( __CLASS__, 'handle_enable_app_passwords' ) );
-		add_action( 'wp_ajax_importonbridge_auto_apppass', array( __CLASS__, 'ajax_auto_apppass' ) );
 	}
 
 	public static function maybe_show_app_passwords_notice(): void {
@@ -145,41 +144,16 @@ final class ImportonBridge_Admin {
 					'ajaxUrl'      => admin_url( 'admin-ajax.php' ),
 					'nonce'        => ImportonBridge_Url_Import::get_ajax_nonce(),
 					'restNonce'    => wp_create_nonce( 'wp_rest' ),
-					'connectUrl'   => rest_url( 'importonbridge/v1/connect' ),
 					'categories'   => ImportonBridge_Url_Import::get_categories(),
 					'latestRun'    => ImportonBridge_Url_Import::get_latest_run(),
 					'recentRuns'   => ImportonBridge_Url_Import::get_recent_runs( 8, false ),
 					'siteBaseUrl'  => home_url( '/' ),
 					'currentUser'  => $user instanceof WP_User ? (string) $user->user_login : '',
 					'settingsUrl'  => admin_url( 'admin.php?page=importon-bridge' ),
-					'quota'        => array( 'allowed' => true, 'remaining' => 999, 'is_pro' => true ),
-					'quotaLimit'   => 999,
-				)
-			);
-
-			wp_add_inline_script( 'importonbridge_url_import_admin', self::get_quota_js() );
-		}
-
-		if ( in_array( $hook_suffix, array( self::$hook_suffix, self::$url_import_hook_suffix ), true ) ) {
-			wp_enqueue_script(
-				'importonbridge_auto_connect',
-				plugin_dir_url( IMPORTONBRIDGE_PLUGIN_FILE ) . 'assets/auto-connect.js',
-				array(),
-				IMPORTONBRIDGE_VERSION,
-				true
-			);
-
-			$user = wp_get_current_user();
-			wp_localize_script(
-				'importonbridge_auto_connect',
-				'importonbridgeAutoConnectData',
-				array(
-					'ajaxUrl'     => admin_url( 'admin-ajax.php' ),
-					'siteBaseUrl' => home_url( '/' ),
-					'currentUser' => $user instanceof WP_User ? (string) $user->user_login : '',
 				)
 			);
 		}
+
 	}
 
 	public static function render_legacy_redirect(): void {
@@ -196,11 +170,6 @@ final class ImportonBridge_Admin {
 		$site_url     = home_url( '/' );
 		$current_user = wp_get_current_user();
 
-		$stored_creds = array();
-		if ( $current_user instanceof WP_User && $current_user->ID > 0 ) {
-			$stored_creds = (array) get_user_meta( $current_user->ID, 'importonbridge_creds', true );
-		}
-		$has_stored = ! empty( $stored_creds['password'] ) && ! empty( $stored_creds['username'] ) && ! empty( $stored_creds['base_url'] );
 		?>
 		<div class="wrap importonbridge-wrap importonbridge-shell importonbridge-page">
 		<meta name="importonbridge-url-import-bridge" content="1">
@@ -232,15 +201,12 @@ final class ImportonBridge_Admin {
 				<div class="importonbridge-card importonbridge-card--cta" style="margin-bottom:16px;">
 					<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
 						<div>
-							<div style="font-weight:600;font-size:14px;margin-bottom:4px;">Connect to Extension</div>
-							<div style="color:var(--text-light);font-size:13px;">Make sure the extension is installed and loaded on this page.</div>
+							<div style="font-weight:600;font-size:14px;margin-bottom:4px;">Create an Application Password</div>
+							<div style="color:var(--text-light);font-size:13px;">Create one in your WordPress profile, then paste the site URL, username, and password into the extension.</div>
 						</div>
-						<button type="button" class="importonbridge-btn" id="importonbridge-connect-btn">Connect to Extension</button>
+						<a class="importonbridge-btn" href="<?php echo esc_url( get_edit_profile_url( $current_user->ID ) ); ?>" target="_blank" rel="noopener noreferrer">Open My Profile</a>
 					</div>
-					<div id="importonbridge-connect-status" style="margin-top:10px;font-size:13px;font-weight:600;min-height:20px;"></div>
 				</div>
-
-				<div id="importonbridge-new-apppass-data" style="display:none;"<?php if ( $has_stored ) : ?> data-password="<?php echo esc_attr( $stored_creds['password'] ); ?>" data-username="<?php echo esc_attr( $stored_creds['username'] ); ?>" data-baseurl="<?php echo esc_attr( $stored_creds['base_url'] ); ?>"<?php endif; ?>></div>
 			</div>
 			</div>
 			<?php
@@ -583,15 +549,6 @@ final class ImportonBridge_Admin {
 				</div>
 			</div>
 
-			<?php
-			$quota_init  = array( 'allowed' => true, 'remaining' => 999, 'is_pro' => true );
-			$q_is_pro    = ! empty( $quota_init['is_pro'] );
-			$q_remaining = $q_is_pro ? -1 : (int) $quota_init['remaining'];
-			$q_limit     = 999;
-			$q_blocked   = ! $quota_init['allowed'];
-			$q_pct       = ( ! $q_is_pro && $q_limit > 0 ) ? round( ( ( $q_limit - max( 0, $q_remaining ) ) / $q_limit ) * 100 ) : 0;
-			?>
-
 			<div class="importonbridge-grid importonbridge-grid--import">
 				<div class="importonbridge-card importonbridge-card--section importonbridge-card--highlight">
 					<div class="importonbridge-card-head">
@@ -697,124 +654,6 @@ final class ImportonBridge_Admin {
 		</div>
 
 		<?php
-	}
-
-	private static function get_quota_js(): string {
-		return <<<'JS'
-(function () {
-	var cfg   = window.importonbridgeUrlImportData || {};
-	var quota = cfg.quota || {};
-	var limit = cfg.quotaLimit || 20;
-
-	var pill       = document.getElementById('importonbridge-quota-pill');
-	var bar        = document.getElementById('importonbridge-quota-bar');
-	var label      = document.getElementById('importonbridge-quota-label');
-	var timer      = document.getElementById('importonbridge-quota-timer');
-	var blockedMsg = document.getElementById('importonbridge-quota-blocked-msg');
-	var startBtn   = document.getElementById('importonbridge-url-import-start');
-	var retryBtn   = document.getElementById('importonbridge-url-import-retry');
-
-	function pad(n) { return n < 10 ? '0' + n : String(n); }
-
-	function formatCountdown(seconds) {
-		seconds = Math.max(0, Math.floor(seconds));
-		var h = Math.floor(seconds / 3600);
-		var m = Math.floor((seconds % 3600) / 60);
-		var s = seconds % 60;
-		return pad(h) + ':' + pad(m) + ':' + pad(s);
-	}
-
-	function applyQuota(q) {
-		if (!q) return;
-		quota = q;
-		var blocked = !q.allowed;
-		var isPro   = !!q.is_pro;
-		var card    = document.getElementById('importonbridge-quota-card');
-
-		if (isPro) {
-			if (card) card.style.display = 'none';
-			if (startBtn) startBtn.disabled = false;
-			if (retryBtn) retryBtn.disabled = false;
-			return;
-		}
-		if (card) card.style.display = '';
-
-		var remaining = q.remaining || 0;
-		var pct       = Math.round(((limit - remaining) / limit) * 100);
-
-		if (bar) {
-			bar.style.width = pct + '%';
-			bar.style.background = blocked ? '#666' : (remaining <= 5 ? '#888' : '');
-		}
-
-		if (pill) {
-			pill.className = 'importonbridge-status-pill ' + (blocked ? 'importonbridge-status-pill--danger' : (remaining <= 5 ? 'importonbridge-status-pill--warning' : 'importonbridge-status-pill--success'));
-			pill.textContent = blocked ? 'Blocked' : remaining + ' left';
-		}
-
-		if (label && !blocked) {
-			label.textContent = remaining + ' of ' + limit + ' imports remaining this hour';
-		}
-
-		if (blockedMsg) {
-			blockedMsg.style.display = blocked ? '' : 'none';
-		}
-
-		if (timer) {
-			timer.style.display = blocked ? '' : 'none';
-		}
-
-		if (startBtn) startBtn.disabled = blocked;
-		if (retryBtn && blocked) retryBtn.disabled = true;
-	}
-
-	var countdownInterval = null;
-	function startCountdown(cooldownUntil) {
-		if (countdownInterval) clearInterval(countdownInterval);
-		countdownInterval = setInterval(function () {
-			var remaining = cooldownUntil - Math.floor(Date.now() / 1000);
-			if (!timer) return;
-			if (remaining <= 0) {
-				clearInterval(countdownInterval);
-				timer.textContent = '';
-				pollQuota();
-				return;
-			}
-			timer.textContent = formatCountdown(remaining);
-		}, 1000);
-	}
-
-	function pollQuota() {
-		if (!cfg.ajaxUrl || !cfg.nonce) return;
-		var body = new URLSearchParams();
-		body.set('action', 'importonbridge_get_quota');
-		body.set('nonce', cfg.nonce);
-		fetch(cfg.ajaxUrl, {
-			method: 'POST',
-			credentials: 'same-origin',
-			headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8' },
-			body: body.toString()
-		})
-		.then(function (r) { return r.json(); })
-		.then(function (data) {
-			if (data && data.success && data.data && data.data.quota) {
-				applyQuota(data.data.quota);
-				if (!data.data.quota.allowed && data.data.quota.cooldown_until) {
-					startCountdown(data.data.quota.cooldown_until);
-				}
-			}
-		})
-		.catch(function () {});
-	}
-
-	applyQuota(quota);
-	if (quota && !quota.allowed && quota.cooldown_until) {
-		startCountdown(quota.cooldown_until);
-	}
-
-	setInterval(pollQuota, 60000);
-})();
-JS;
 	}
 
 	private static function assert_access(): void {
@@ -951,62 +790,6 @@ JS;
 		$ai_sku_suffix         = self::sanitize_sku_format_part( isset( $ai_settings['sku_suffix'] ) ? (string) $ai_settings['sku_suffix'] : 'K', 'K' );
 		$ai_sku_number_length  = self::sanitize_sku_number_length( isset( $ai_settings['sku_number_length'] ) ? $ai_settings['sku_number_length'] : 3 );
 
-		$app_password_created = null;
-		$app_password_error   = '';
-		$app_password_notice  = '';
-
-		if ( isset( $post['importonbridge_revoke_apppass'] ) ) {
-			check_admin_referer( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' );
-
-			$uuid = isset( $post['importonbridge_revoke_uuid'] ) ? sanitize_text_field( (string) $post['importonbridge_revoke_uuid'] ) : '';
-			if ( $uuid === '' ) {
-				$app_password_error = 'Missing application password id.';
-			} elseif ( ! class_exists( 'WP_Application_Passwords' ) ) {
-				$app_password_error = 'Application Passwords are not available on this WordPress installation.';
-			} else {
-				$res = WP_Application_Passwords::delete_application_password( get_current_user_id(), $uuid );
-				if ( is_wp_error( $res ) ) {
-					$app_password_error = $res->get_error_message();
-				} else {
-					$app_password_notice = 'Application Password revoked.';
-				}
-			}
-		}
-
-		if ( isset( $post['importonbridge_create_apppass'] ) ) {
-			check_admin_referer( 'importonbridge_apppass_action', 'importonbridge_apppass_nonce' );
-
-			$name = isset( $post['importonbridge_apppass_name'] ) ? sanitize_text_field( (string) $post['importonbridge_apppass_name'] ) : '';
-			if ( $name === '' ) {
-				$app_password_error = 'Please enter an application name.';
-			} elseif ( ! class_exists( 'WP_Application_Passwords' ) ) {
-				$app_password_error = 'Application Passwords are not available on this WordPress installation.';
-			} elseif ( ! function_exists( 'wp_is_application_passwords_available_for_user' ) || ! wp_is_application_passwords_available_for_user( get_current_user_id() ) ) {
-				$app_password_error = 'Application Passwords are disabled for this site/user.';
-			} else {
-				$res = WP_Application_Passwords::create_new_application_password(
-					get_current_user_id(),
-					array( 'name' => $name )
-				);
-
-				if ( is_wp_error( $res ) ) {
-					$app_password_error = $res->get_error_message();
-				} elseif ( is_array( $res ) && ! empty( $res[0] ) ) {
-					$app_password_created = (string) $res[0];
-				} else {
-					$app_password_error = 'Failed to create application password.';
-				}
-			}
-		}
-
-		$existing_passwords = array();
-		if ( class_exists( 'WP_Application_Passwords' ) ) {
-			$existing_passwords = WP_Application_Passwords::get_user_application_passwords( get_current_user_id() );
-			if ( ! is_array( $existing_passwords ) ) {
-				$existing_passwords = array();
-			}
-		}
-
 		return array(
 			'ai_notice'           => $ai_notice,
 			'ai_error'            => $ai_error,
@@ -1029,10 +812,6 @@ JS;
 			'ai_sku_middle_prefix'=> $ai_sku_middle_prefix,
 			'ai_sku_suffix'       => $ai_sku_suffix,
 			'ai_sku_number_length'=> $ai_sku_number_length,
-			'app_password_created'=> $app_password_created,
-			'app_password_error'  => $app_password_error,
-			'app_password_notice' => $app_password_notice,
-			'existing_passwords'  => $existing_passwords,
 		);
 	}
 
@@ -1055,10 +834,6 @@ JS;
 				/* Download Button */
 				'.importonbridge-btn-download { display: inline-flex; align-items: center; gap: 6px; padding: 8px 16px; border-radius: 6px; font-weight: 500; font-size: 13px; cursor: pointer; text-decoration: none; border: 1px solid var(--border-strong); background: #fff; color: #333; }',
 				'.importonbridge-btn-download:hover { border-color: #666; background: #fafafa; }',
-				/* Quota warning icon */
-				'.importonbridge-quota-warning { display: inline-block; margin-left: 6px; color: #666; cursor: help; font-size: 14px; transition: color 0.2s; }',
-				'.importonbridge-quota-warning:hover { color: #dc2626; }',
-				/* Let freemius handle the upgrade styling - no custom CSS needed */
 				/* Grids */
 				'.importonbridge-overview-grid, .importonbridge-panel-grid, .importonbridge-grid { display: grid; gap: 16px; }',
 				'.importonbridge-overview-grid { grid-template-columns: repeat(2, 1fr); margin-bottom: 16px; }',
@@ -1458,40 +1233,4 @@ JS;
 		<?php
 	}
 
-	public static function ajax_auto_apppass(): void {
-		if ( ! current_user_can( 'manage_options' ) ) {
-			wp_send_json_error( array( 'message' => 'Unauthorized.' ) );
-		}
-		if ( ! class_exists( 'WP_Application_Passwords' ) ) {
-			wp_send_json_error( array( 'message' => 'Application Passwords not available.' ) );
-		}
-
-		$current_user = wp_get_current_user();
-		$pw_name      = 'Importon Bridge';
-
-		$existing = (array) WP_Application_Passwords::get_user_application_passwords( $current_user->ID );
-		foreach ( $existing as $ap ) {
-			if ( isset( $ap['name'] ) && $ap['name'] === $pw_name && isset( $ap['uuid'] ) ) {
-				WP_Application_Passwords::delete_application_password( $current_user->ID, $ap['uuid'] );
-			}
-		}
-
-		$result = WP_Application_Passwords::create_new_application_password( $current_user->ID, array( 'name' => $pw_name ) );
-		if ( is_wp_error( $result ) ) {
-			wp_send_json_error( array( 'message' => $result->get_error_message() ) );
-		}
-
-		$plain = $result[0];
-		update_user_meta( $current_user->ID, 'importonbridge_creds', array(
-			'password' => $plain,
-			'username' => $current_user->user_login,
-			'base_url' => home_url( '/' ),
-		) );
-
-		wp_send_json_success( array(
-			'password' => $plain,
-			'username' => $current_user->user_login,
-			'baseUrl'  => home_url( '/' ),
-		) );
-	}
 }

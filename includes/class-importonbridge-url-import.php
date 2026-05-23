@@ -14,17 +14,7 @@ final class ImportonBridge_Url_Import {
 		add_action( 'wp_ajax_importonbridge_url_import_get_run', array( __CLASS__, 'ajax_get_run' ) );
 		add_action( 'wp_ajax_importonbridge_url_import_recent_runs', array( __CLASS__, 'ajax_recent_runs' ) );
 		add_action( 'wp_ajax_importonbridge_url_import_clear_runs', array( __CLASS__, 'ajax_clear_runs' ) );
-		add_action( 'wp_ajax_importonbridge_get_quota', array( __CLASS__, 'ajax_get_quota' ) );
 		add_action( 'admin_post_importonbridge_url_import_failed_log', array( __CLASS__, 'handle_failed_log' ) );
-	}
-
-	public static function ajax_get_quota(): void {
-		check_ajax_referer( self::AJAX_NONCE, 'nonce' );
-		if ( ! self::can_manage() ) {
-			wp_send_json_error( array( 'message' => 'Permission denied.' ), 403 );
-		}
-		$status = array( 'allowed' => true, 'remaining' => 999, 'is_pro' => true );
-		wp_send_json_success( array( 'quota' => $status ) );
 	}
 
 	public static function can_manage(): bool {

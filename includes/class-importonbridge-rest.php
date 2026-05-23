@@ -475,33 +475,17 @@ final class ImportonBridge_Rest {
 		public static function handle_connect( WP_REST_Request $request ): WP_REST_Response {
 			nocache_headers();
 
-			$user_id  = get_current_user_id();
 			$user     = wp_get_current_user();
 			$site_url = rtrim( home_url( '/' ), '/' );
-
-			$has_app_passwords = class_exists( 'WP_Application_Passwords' );
-			$app_pw_available  = false;
-			if ( $has_app_passwords ) {
-				$existing = WP_Application_Passwords::get_user_application_passwords( $user_id );
-				if ( is_array( $existing ) ) {
-					foreach ( $existing as $pw ) {
-						if ( isset( $pw['name'] ) && str_contains( (string) $pw['name'], 'Importon Bridge' ) ) {
-							$app_pw_available = true;
-							break;
-						}
-					}
-				}
-			}
 
 			return new WP_REST_Response(
 				array(
 					'ok'                 => true,
 					'logged_in'          => is_user_logged_in(),
 					'capability'         => current_user_can( 'manage_woocommerce' ),
-					'app_passwords'      => $has_app_passwords,
-					'app_pw_created'     => $app_pw_available,
 					'site_url'           => $site_url,
 					'username'           => (string) $user->user_login,
+					'profile_url'        => get_edit_profile_url( (int) $user->ID ),
 					'connect_manual_url' => admin_url( 'admin.php?page=importon-bridge' ),
 				),
 				200
@@ -618,19 +602,6 @@ final class ImportonBridge_Rest {
 		}
 
 		$import_user_id = (int) get_current_user_id();
-		$quota          = array( 'allowed' => true );
-		if ( ! $quota['allowed'] ) {
-			return new WP_REST_Response(
-				array(
-					'ok'               => false,
-					'error'            => 'rate_limited',
-					'message'          => 'Import limit reached. Cooldown expires at ' . gmdate( 'Y-m-d H:i', $quota['cooldown_until'] ) . ' UTC.',
-					'cooldown_until'   => $quota['cooldown_until'],
-					'cooldown_seconds' => $quota['cooldown_seconds'],
-				),
-				429
-			);
-		}
 
 		self::reset_usage_accumulator();
 
@@ -872,23 +843,14 @@ final class ImportonBridge_Rest {
 		// Theme compatibility: some galleries (e.g. Templatemela) read video URL from attachment meta.
 		self::sync_templatemela_gallery_video_meta( $product_id, $video_urls );
 
-		// Record successful import against the user's rate limit quota.
-		$quota_after = array();
-
 		return new WP_REST_Response(
 			array(
-				'ok'          => true,
-				'product_id'  => $product_id,
-				'created'     => ! $is_update,
-				'updated'     => $is_update,
-				'sku'         => $sku,
-				'source_url'  => $source_url,
-				'quota'       => array(
-					'remaining'        => $quota_after['remaining'],
-					'cooldown_until'   => $quota_after['cooldown_until'],
-					'cooldown_seconds' => $quota_after['cooldown_seconds'],
-					'window_reset_at'  => $quota_after['window_reset_at'],
-				),
+				'ok'         => true,
+				'product_id' => $product_id,
+				'created'    => ! $is_update,
+				'updated'    => $is_update,
+				'sku'        => $sku,
+				'source_url' => $source_url,
 			),
 			200
 		);

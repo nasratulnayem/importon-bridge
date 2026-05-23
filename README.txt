@@ -1,6 +1,6 @@
 === Importon Bridge ===
 Contributors: nasratulnayem
-Tags: woocommerce, import, alibaba, products, chrome extension
+Tags: woocommerce, import, product importer, chrome extension, alibaba
 Requires at least: 6.0
 Tested up to: 6.9
 Requires PHP: 7.4
@@ -8,85 +8,65 @@ Stable tag: 0.1.0
 License: GPLv2 or later
 License URI: https://www.gnu.org/licenses/gpl-2.0.html
 
-Import Alibaba products into WooCommerce via a Chrome extension and REST API, with optional AI-powered description rewriting.
+Importon Bridge connects a Chrome extension to WooCommerce so you can import products from product pages into WordPress with one workflow.
 
 == Description ==
 
-Importon Bridge connects a companion Chrome extension to your WooCommerce store. Browse any Alibaba product page, click the extension, and the product is created in WooCommerce automatically — including title, description, pricing, images, attributes, and variations.
+Importon Bridge provides a structured import workflow for WooCommerce stores:
 
-**Key features:**
+* a WordPress admin screen for setup and monitoring
+* a Chrome extension for capturing product data in the browser
+* authenticated REST endpoints for product creation and updates
+* optional AI rewriting for product titles and descriptions
+* a batch URL import queue with run history and failed-item logs
 
-* One-click product import from Alibaba product pages via Chrome extension
-* Supports simple and variable products with full attribute/variation mapping
-* Optional AI rewriting of product title and descriptions via OpenAI or Google Gemini
-* Batch URL import queue — paste multiple Alibaba URLs and process them with progress tracking
-* Application Password management built into the admin panel
-* AI usage tracking with per-product token and cost breakdown
+The plugin supports simple and variable WooCommerce products, including title, description, images, attributes, variations, and pricing.
 
-**Third-party services:**
+AI rewriting is optional. When enabled, the plugin can send product copy to OpenAI or Google Gemini using administrator-provided API keys.
 
-This plugin optionally sends product content to external AI APIs for rewriting. These services are only called when AI rewriting is enabled and API keys are configured by the site administrator.
-
-* **OpenAI** — product content is sent to the OpenAI API for rewriting.
-  * Service: https://openai.com
-  * Terms of Service: https://openai.com/policies/terms-of-use
-  * Privacy Policy: https://openai.com/policies/privacy-policy
-
-* **Google Gemini** — product content is sent to the Google Gemini API for rewriting.
-  * Service: https://ai.google.dev
-  * Terms of Service: https://ai.google.dev/terms
-  * Privacy Policy: https://policies.google.com/privacy
-
-No data is sent to these services without explicit configuration and activation by the administrator.
-
-The plugin also facilitates importing product data that originates from Alibaba.com. Users are responsible for complying with Alibaba's Terms of Service when importing product data.
+Alibaba is referenced only to describe supported product pages. Importon Bridge is not affiliated with Alibaba Group.
 
 == Installation ==
 
 1. Upload the `importon-bridge` folder to `/wp-content/plugins/`.
 2. Activate the plugin through the **Plugins** menu in WordPress.
 3. Ensure WooCommerce is installed and active.
-4. Go to **Importon Bridge > Settings** in the WordPress admin menu.
-5. Download the Importon Bridge Chrome extension from the link on the settings page and install it in Chrome.
-6. Create an Application Password on the settings page and paste it into the Chrome extension settings along with your site URL and WordPress username.
-7. Browse to any Alibaba product page and click the extension icon to import.
+4. Open **Importon Bridge** in the WordPress admin.
+5. Download the Chrome extension from the settings page and load it in Chrome.
+6. Create a WordPress Application Password in your user profile and paste it into the extension together with your site URL and username.
 
 == Frequently Asked Questions ==
 
-= Does this use the official Alibaba API? =
+= Does this require the official Alibaba API? =
 
-No. The Chrome extension reads the product page directly in your browser. No official Alibaba API credentials are required.
+No. The Chrome extension reads product data from the browser and sends it to WordPress through the plugin's REST API.
 
 = Is AI rewriting required? =
 
-No. AI rewriting is optional. You can import products with the original Alibaba copy by leaving AI settings unconfigured or disabling the rewrite toggle.
+No. AI rewriting is optional and only runs when you enable it and configure API keys.
 
 = Which AI providers are supported? =
 
-OpenAI (GPT models) and Google Gemini. You can configure one or both and set a preferred provider order with automatic fallback.
+OpenAI and Google Gemini.
 
-= Will this work on multisite? =
+= Where are import logs stored? =
 
-The plugin is designed for single-site installations. Multisite support is not tested.
-
-= Where are import run logs stored? =
-
-Run logs are stored in `wp-content/uploads/importon-bridge/`. They are deleted when you use the "Clear All" button on the URL Import screen, or when the plugin is uninstalled.
+Import run logs are stored in the WordPress uploads directory and can be reviewed from the Importon Bridge admin screens.
 
 == Screenshots ==
 
-1. Settings page — Application Password management and AI rewrite configuration.
-2. URL Import screen — batch queue with live progress counters.
-3. AI Usage page — per-product token and cost breakdown.
+1. Settings and connection screen.
+2. Batch URL import dashboard.
+3. AI rewrite settings and usage panels.
 
 == Changelog ==
 
 = 0.1.0 =
 * Initial release.
-* Chrome extension import flow via REST API with Application Password authentication.
-* Optional AI description rewriting via OpenAI and Google Gemini.
-* Batch URL import queue with run history and failed-URL logs.
-* AI usage tracking table with token counts and cost estimates.
+* Chrome extension import flow via authenticated REST API.
+* WooCommerce product creation and updates.
+* Optional AI rewriting.
+* Batch URL import queue with run logs.
 
 == Upgrade Notice ==
 

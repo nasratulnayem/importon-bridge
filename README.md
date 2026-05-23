@@ -1,210 +1,119 @@
 # Importon Bridge
 
-> Import Alibaba products into WooCommerce in one click — via a companion Chrome extension, a secure REST API, and optional AI-powered description rewriting.
+Importon Bridge connects a Chrome extension to WooCommerce so you can import products from Alibaba-style product pages into WordPress with one workflow.
 
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue?logo=wordpress)](https://wordpress.org)
 [![WooCommerce](https://img.shields.io/badge/WooCommerce-8.0%2B-purple?logo=woocommerce)](https://woocommerce.com)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-777BB4?logo=php)](https://php.net)
 [![License](https://img.shields.io/badge/License-GPLv2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![Version](https://img.shields.io/badge/Version-0.1.0-orange)](https://github.com/nasratulnayem/importon-bridge/releases)
 
----
+## Overview
+
+Importon Bridge is built for stores that want a simple, repeatable import workflow:
+
+- a WordPress admin screen for setup and monitoring
+- a Chrome extension for capturing product data from the browser
+- a REST API for authenticated product creation and updates
+- optional AI rewriting for titles and descriptions
+- a batch URL import queue for pasting multiple product links at once
+
+Alibaba is referenced only to describe supported product pages. Importon Bridge is not affiliated with Alibaba Group.
 
 ## What It Does
 
-Browse any Alibaba product page, click the Importon Bridge Chrome extension, and the product is **instantly created in your WooCommerce store** — complete with title, description, pricing, images, attributes, and variations.
-
-No CSV files. No copy-pasting. No manual data entry.
-
----
-
-## Features
-
-| Feature | Free | Pro |
-|---------|------|-----|
-| One-click product import via Chrome extension | ✅ | ✅ |
-| Simple & variable products | ✅ | ✅ |
-| Full attribute + variation mapping | ✅ | ✅ |
-| Image sideloading from Alibaba CDN | ✅ | ✅ |
-| Batch URL import queue with progress tracking | ✅ | ✅ |
-| AI description rewriting (OpenAI / Gemini) | ✅ | ✅ |
-| AI token + cost usage dashboard | ✅ | ✅ |
-| Application Password manager (in admin) | ✅ | ✅ |
-| Import limit (20/hour, 8h cooldown) | ✅ | — |
-| **Unlimited imports** | — | ✅ |
-| **No cooldown** | — | ✅ |
-
----
-
-## How It Works
-
-```
-Alibaba Product Page
-       │
-       ▼
- Importon Bridge Chrome Extension  ───────────────────────┐
- (reads page data in browser)                            │
-        │                                                 │
-        ▼                                                 ▼
-POST /wp-json/ib/v1/import               Batch URL Import (Admin)
-  (Application Password auth)           paste URLs → extension runs queue
-       │
-       ▼
- [Optional] AI Rewrite
-  OpenAI or Gemini rewrites
-  title + description
-       │
-       ▼
- WooCommerce Product Created
-  (simple or variable, with images)
-```
-
----
+- imports product title, description, price, images, attributes, and variations
+- supports simple and variable WooCommerce products
+- can rewrite product copy through OpenAI or Google Gemini when enabled
+- stores import run history and failed-item logs for review
+- adds a product video to the gallery when a video URL is available
 
 ## Requirements
 
 - WordPress 6.0+
 - WooCommerce 8.0+
 - PHP 7.4+
-- Chrome browser (for the companion extension)
-
----
+- Google Chrome or Chromium-based browser for the extension
 
 ## Installation
 
-### Plugin
-
 1. Download the latest release from the [Releases page](https://github.com/nasratulnayem/importon-bridge/releases/latest).
-2. Upload to `/wp-content/plugins/` and activate.
-3. WooCommerce must be installed and active.
+2. Upload the plugin to `/wp-content/plugins/` and activate it.
+3. Make sure WooCommerce is installed and active.
+4. Open **Importon Bridge** in the WordPress admin.
+5. Download the Chrome extension from the plugin settings page and load it in Chrome.
+6. Create a WordPress Application Password from your user profile and paste it into the extension together with your site URL and username.
 
-### Chrome Extension
+## Plugin Workflow
 
-1. Go to **Importon Bridge → Settings** in your WordPress admin.
-2. Click **Download Extension** and load it in Chrome (`chrome://extensions` → Developer mode → Load unpacked).
-3. On the Settings page, create an **Application Password** and paste it into the extension along with your site URL and username.
+1. Open an Alibaba product page in Chrome.
+2. Use the Importon Bridge extension to capture the product data.
+3. Send the data to WordPress through the authenticated REST API.
+4. Create or update the WooCommerce product.
+5. Optionally rewrite the content with AI before saving.
 
-### AI Rewriting (Optional)
+## REST API
 
-1. Go to **Importon Bridge → Settings → AI Rewrite Settings**.
-2. Enter an OpenAI and/or Gemini API key.
-3. Select provider order and preferred model.
-4. Enable the rewrite toggle.
+The plugin exposes authenticated endpoints under `importonbridge/v1`.
 
----
+| Method | Endpoint | Purpose |
+| --- | --- | --- |
+| `POST` | `/wp-json/importonbridge/v1/import` | Create or update a WooCommerce product |
+| `GET` | `/wp-json/importonbridge/v1/ping` | Confirm authentication |
+| `GET` | `/wp-json/importonbridge/v1/categories` | List WooCommerce product categories |
+| `GET` | `/wp-json/importonbridge/v1/settings` | Read extension settings |
+| `POST` | `/wp-json/importonbridge/v1/settings` | Save extension settings |
+| `POST` | `/wp-json/importonbridge/v1/connect` | Return connection details for the browser extension |
 
-## REST API Endpoints
+## AI Rewriting
 
-All endpoints require `manage_woocommerce` capability via WordPress Application Password authentication.
+AI rewriting is optional and only runs when you enable it in the admin settings.
 
-| Method | Endpoint | Description |
-|--------|----------|-------------|
-| `POST` | `/wp-json/ib/v1/import` | Import a single product |
-| `GET` | `/wp-json/ib/v1/ping` | Auth check |
-| `GET` | `/wp-json/ib/v1/categories` | List WooCommerce categories |
-| `GET` | `/wp-json/ib/v1/settings` | Get extension settings |
-| `POST` | `/wp-json/ib/v1/settings` | Update extension settings |
-| `POST` | `/wp-json/ib/v1/connect` | Generate bootstrap token for extension |
-| `GET` | `/wp-json/ib/v1/pending-connect` | Retrieve credentials via token |
-
----
-
-## Import Rate Limits (Free Plan)
-
-- **20 imports per hour** per user
-- Exceeding the limit triggers an **8-hour cooldown**
-- Remaining quota shown live in the admin UI
-- Pro plan removes all limits
-
----
-
-## AI Provider Support
-
-| Provider | Models |
-|----------|--------|
-| OpenAI | gpt-4o-mini, gpt-4.1-nano, gpt-4.1-mini, gpt-4o, gpt-4.1, gpt-3.5-turbo, custom |
-| Google Gemini | gemini-2.5-flash, gemini-2.0-flash, gemini-1.5-flash, gemini-1.5-pro, custom |
-
-AI rewrites product **title**, **short description**, and **long description** using your configured keywords and call-to-action URL.
-
----
-
-## Screenshots
-
-### 1. Importon Bridge Settings and AI Rewrite Controls
-
-![Importon Bridge Settings and AI Rewrite Controls](assets/screenshot-1.png)
-
-### 2. Application Password and Extension Connection
-
-![Application Password and Extension Connection](assets/screenshot-2.png)
-
-### 3. Batch URL Import Dashboard
-
-![Batch URL Import Dashboard](assets/screenshot-3.png)
-
----
+- OpenAI and Google Gemini are both supported
+- API keys are stored server-side in WordPress options
+- You can choose provider order and model selection in the settings screen
 
 ## Security
 
-- All admin actions protected by WordPress nonces
-- REST API requires `manage_woocommerce` capability + Application Password
-- Bootstrap endpoint (`/pending-connect`) uses 192-bit single-use token with IP binding and 5-minute TTL
-- Cookie header injection prevention in scrape importer
-- AI API keys stored in `wp_options` (server-side only, never returned via REST)
+- admin actions use WordPress nonces
+- REST endpoints check authentication and capabilities
+- user input is sanitized before storage or processing
+- output is escaped before rendering
+- external AI calls only happen when the administrator configures them
 
----
+## Screenshots
+
+1. Settings and connection screen
+2. Batch URL import dashboard
+3. AI rewrite settings and usage panels
 
 ## File Structure
 
-```
+```text
 importon-bridge/
-├── importon-bridge.php                # Plugin entry point
-├── README.txt                         # WordPress.org readme
-├── license.txt                        # GPL license
+├── importon-bridge.php
+├── README.txt
+├── README.md
+├── license.txt
 ├── assets/
-│   └── url-import-admin.js            # Batch import UI script
-├── vendor/
-│   └── freemius/                      # Freemius SDK
+│   └── url-import-admin.js
 └── includes/
-    ├── class-awi-admin.php            # Admin menus, settings, usage page
-    ├── class-awi-rest.php             # REST endpoints + AI rewrite logic
-    ├── class-awi-frontend.php         # Product video injection
-    ├── class-awi-url-import.php       # Batch URL import AJAX handlers
-    ├── class-awi-rate-limiter.php     # Free plan import quota
-    ├── class-awi-freemius.php         # Freemius SDK init (Pro plan)
+    ├── class-importonbridge-admin.php
+    ├── class-importonbridge-frontend.php
+    ├── class-importonbridge-rest.php
+    └── class-importonbridge-url-import.php
 ```
-
----
-
-## Freemius / Pro Plan
-
-This plugin uses [Freemius](https://freemius.com) for licence management.
-
-To activate Pro:
-1. Create a plugin at freemius.com and obtain your `plugin_id` and `public_key`.
-2. Ensure the Freemius SDK is present in `vendor/freemius/`.
-3. Update the Freemius app configuration in `includes/class-awi-freemius.php` if your dashboard values change.
-
-The plugin works fully without Freemius installed (free plan, no SDK required).
-
----
 
 ## Changelog
 
 ### 0.1.0
-- Initial release
-- Chrome extension import flow via REST API
-- Simple and variable product support
-- AI rewriting via OpenAI and Google Gemini
-- Batch URL import queue with run logs
-- AI usage tracking dashboard
-- Free plan rate limiting (20/hour, 8h cooldown)
-- Freemius Pro plan integration stub
-- WP.org compliance fixes
 
----
+- Initial release
+- Chrome extension product import flow
+- WooCommerce product creation and updates
+- Optional AI rewriting
+- Batch URL import queue
+- Failed-run logging and admin monitoring
 
 ## License
 
-[GPLv2 or later](https://www.gnu.org/licenses/gpl-2.0.html)
+GPLv2 or later
