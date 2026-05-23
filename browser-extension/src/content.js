@@ -429,23 +429,21 @@ const IMPORTED_URLS_KEY = "importonbridgeImportedProductUrls";
     return new Promise((resolve) => {
       try {
         chrome.storage.local.get(
-          { wpBaseUrl: "", wpUser: "", wpAppPassword: "" },
+          { wpBaseUrl: "" },
           (localVals) => {
             chrome.storage.sync.get(
-              { wpBaseUrl: "", wpUser: "", wpAppPassword: "" },
+              { wpBaseUrl: "" },
               (syncVals) => {
                 const merged = { ...syncVals, ...localVals };
                 resolve({
-                  wpBaseUrl: String(merged.wpBaseUrl || "").trim().replace(/\/+$/, ""),
-                  wpUser: String(merged.wpUser || "").trim(),
-                  wpAppPassword: String(merged.wpAppPassword || "").trim()
+                  wpBaseUrl: String(merged.wpBaseUrl || "").trim().replace(/\/+$/, "")
                 });
               }
             );
           }
         );
       } catch {
-        resolve({ wpBaseUrl: "", wpUser: "", wpAppPassword: "" });
+        resolve({ wpBaseUrl: "" });
       }
     });
   }

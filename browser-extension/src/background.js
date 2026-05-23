@@ -2,8 +2,6 @@
 
 const DEFAULTS = {
   wpBaseUrl: "",
-  wpUser: "",
-  wpAppPassword: "",
   updateExisting: true,
   downloadImages: true,
   defaultCategoryId: 0,
@@ -577,9 +575,6 @@ async function testWpAuth(settingsOverride = {}) {
   const settings = mergeImportSettings(await getSettings(), settingsOverride);
   const base = normalizeWpBaseUrl(settings.wpBaseUrl);
   if (!base) throw new Error("Set WordPress Base URL.");
-  if (!settings.wpUser || !settings.wpAppPassword) {
-    throw new Error("Set WordPress username + application password.");
-  }
 
   // Prefer plugin ping: this works even if wp/v2/users/me is blocked or app-password auth is flaky.
   const resp = await fetchWithRestFallback(
@@ -609,9 +604,6 @@ async function fetchWpCategories(settingsOverride = {}) {
   const settings = mergeImportSettings(await getSettings(), settingsOverride);
   const base = normalizeWpBaseUrl(settings.wpBaseUrl);
   if (!base) throw new Error("Set WordPress Base URL.");
-  if (!settings.wpUser || !settings.wpAppPassword) {
-    throw new Error("Set WordPress username + application password.");
-  }
   let data = null;
 
   const pingResp = await fetchWithRestFallback(
@@ -651,7 +643,7 @@ async function fetchWpCategories(settingsOverride = {}) {
 async function getConnectionState(settingsOverride = {}) {
   const settings = mergeImportSettings(await getSettings(), settingsOverride);
   const base = normalizeWpBaseUrl(settings.wpBaseUrl);
-  const configured = !!(base && settings.wpUser && settings.wpAppPassword);
+  const configured = !!base;
   const cachedCategories = Array.isArray(settings.cachedCategories) ? settings.cachedCategories : [];
   let connected = !!settings.authPassed && configured;
   let authError = "";
@@ -685,9 +677,6 @@ async function connectExtension(input = {}) {
   const settings = mergeImportSettings(await getSettings(), input);
   const base = normalizeWpBaseUrl(settings.wpBaseUrl);
   if (!base) throw new Error("Set WordPress Base URL.");
-  if (!settings.wpUser || !settings.wpAppPassword) {
-    throw new Error("Set WordPress username + application password.");
-  }
 
   const auth = await testWpAuth(settings);
   let categories = [];
@@ -705,8 +694,6 @@ async function connectExtension(input = {}) {
 
   await setSettings({
     wpBaseUrl: base,
-    wpUser: normalizeWpUser(settings.wpUser),
-    wpAppPassword: normalizeWpAppPassword(settings.wpAppPassword),
     authPassed: true,
     cachedCategories: categories
   });
@@ -731,9 +718,6 @@ async function pullSettingsFromWordPress(settingsOverride = {}) {
   const settings = mergeImportSettings(await getSettings(), settingsOverride);
   const base = normalizeWpBaseUrl(settings.wpBaseUrl);
   if (!base) throw new Error("Set WordPress Base URL.");
-  if (!settings.wpUser || !settings.wpAppPassword) {
-    throw new Error("Set WordPress username + application password.");
-  }
   const resp = await fetchWithRestFallback(
     base,
     "wp-json/importonbridge/v1/settings",
@@ -759,7 +743,7 @@ async function pullSettingsFromWordPress(settingsOverride = {}) {
 async function pushSettingsToWordPress(inputSettings = {}, settingsOverride = {}) {
   const settings = mergeImportSettings(await getSettings(), settingsOverride);
   const base = normalizeWpBaseUrl(settings.wpBaseUrl);
-  if (!base || !settings.wpUser || !settings.wpAppPassword) {
+  if (!base) {
     // No auth yet: keep local only.
     const mergedLocal = await setSettings(normalizeSyncedSettings(inputSettings || {}));
     return { ok: true, settings: mergedLocal, skippedRemote: true };
@@ -795,9 +779,6 @@ async function pushSettingsToWordPress(inputSettings = {}, settingsOverride = {}
 async function wpImport(payload, settings) {
   const base = normalizeWpBaseUrl(settings.wpBaseUrl);
   if (!base) throw new Error("Set WordPress Base URL in Importon Bridge.");
-  if (!settings.wpUser || !settings.wpAppPassword) {
-    throw new Error("Set WordPress username + application password in Importon Bridge.");
-  }
 
   const resp = await fetchWithRestFallback(
     base,
@@ -2051,11 +2032,18 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
         return;
       }
 
+      if (msg?.cmd === "sync_wp_site_context") {
+        const base = normalizeWpBaseUrl(msg?.wpBaseUrl);
+        if (base) {
+          await setSettings({ wpBaseUrl: base });
+        }
+        sendResponse({ ok: true, wpBaseUrl: base });
+        return;
+      }
+
       if (msg?.cmd === "get_connection_state") {
         const res = await getConnectionState({
           wpBaseUrl: msg?.wpBaseUrl,
-          wpUser: msg?.wpUser,
-          wpAppPassword: msg?.wpAppPassword,
           wpNonce: msg?.wpNonce
         });
         sendResponse(res);
@@ -2064,9 +2052,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
       if (msg?.cmd === "connect_bridge") {
         const res = await connectExtension({
-          wpBaseUrl: msg?.wpBaseUrl,
-          wpUser: msg?.wpUser,
-          wpAppPassword: msg?.wpAppPassword
+          wpBaseUrl: msg?.wpBaseUrl
         });
         sendResponse(res);
         return;
@@ -2081,8 +2067,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg?.cmd === "test_wp_auth") {
         const res = await testWpAuth({
           wpBaseUrl: msg?.wpBaseUrl,
-          wpUser: msg?.wpUser,
-          wpAppPassword: msg?.wpAppPassword,
           wpNonce: msg?.wpNonce
         });
         sendResponse(res);
@@ -2092,8 +2076,6 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
       if (msg?.cmd === "fetch_wp_categories") {
         const res = await fetchWpCategories({
           wpBaseUrl: msg?.wpBaseUrl,
-          wpUser: msg?.wpUser,
-          wpAppPassword: msg?.wpAppPassword,
           wpNonce: msg?.wpNonce
         });
         sendResponse(res);
@@ -2139,7 +2121,7 @@ chrome.runtime.onMessage.addListener((msg, sender, sendResponse) => {
 
       if (msg?.cmd === "run_url_import_batch") {
         const settings = mergeImportSettings(await getSettings(), { wpNonce: msg?.restNonce });
-        if (!(normalizeWpBaseUrl(settings.wpBaseUrl) && settings.wpUser && settings.wpAppPassword)) {
+        if (!normalizeWpBaseUrl(settings.wpBaseUrl)) {
           throw new Error("Complete the WordPress site URL, username, and Application Password in Importon Bridge first.");
         }
         if (!senderMatchesConfiguredWpSite(sender?.tab?.url, settings)) {

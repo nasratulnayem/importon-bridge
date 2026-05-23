@@ -2,8 +2,6 @@
 
 const DEFAULTS = {
   wpBaseUrl: "",
-  wpUser: "",
-  wpAppPassword: "",
   defaultCategoryId: 0,
   cachedCategories: [],
   uiMode: "light",
@@ -43,8 +41,6 @@ function setConnectionState(connected, meta = {}) {
   const badge = qs("connectionBadge");
   const connectBtn = qs("connectBtn");
   const disconnectBtn = qs("disconnectBtn");
-  const form = qs("connectionForm");
-  const refreshBtn = qs("refreshBtn");
   const copy = qs("connectionCopy");
 
   document.body.dataset.state = connected ? "connected" : "disconnected";
@@ -56,8 +52,6 @@ function setConnectionState(connected, meta = {}) {
     connectBtn.className = "btn btn--success";
     connectBtn.disabled = true;
     disconnectBtn.classList.remove("hidden");
-    form.classList.add("hidden");
-    refreshBtn.classList.remove("hidden");
     copy.textContent = meta?.wpBaseUrl ? `Connected to ${meta.wpBaseUrl}` : "Connected and ready for imports.";
   } else {
     badge.textContent = "Disconnected";
@@ -66,8 +60,6 @@ function setConnectionState(connected, meta = {}) {
     connectBtn.className = "btn btn--danger";
     connectBtn.disabled = false;
     disconnectBtn.classList.add("hidden");
-    form.classList.remove("hidden");
-    refreshBtn.classList.add("hidden");
     copy.textContent = "Connect once to activate imports and category sync.";
   }
 }
@@ -106,8 +98,6 @@ async function saveDraft(extra = {}) {
   const next = {
     ...current,
     wpBaseUrl: normalizeBaseUrl(qs("wpBaseUrl").value),
-    wpUser: qs("wpUser").value.trim(),
-    wpAppPassword: qs("wpAppPassword").value.trim(),
     defaultCategoryId: toPositiveInt(qs("defaultCategoryId").value),
     uiMode: document.documentElement.getAttribute("data-theme") === "dark" ? "dark" : "light",
     ...extra
@@ -127,10 +117,6 @@ async function loadConnectionState() {
   const stored = { ...DEFAULTS, ...syncVals, ...localVals };
 
   applyTheme(stored.uiMode || "light");
-  qs("wpBaseUrl").value = stored.wpBaseUrl || "";
-  qs("wpUser").value = stored.wpUser || "";
-  qs("wpAppPassword").value = stored.wpAppPassword || "";
-
   const response = await chrome.runtime.sendMessage({ cmd: "get_connection_state" });
   if (response?.ok) {
     setConnectionState(!!response.connected, { wpBaseUrl: response.wpBaseUrl || stored.wpBaseUrl || "" });
@@ -148,12 +134,9 @@ async function loadConnectionState() {
 }
 
 async function connect() {
-  const wpBaseUrl = normalizeBaseUrl(qs("wpBaseUrl").value);
-  const wpUser = qs("wpUser").value.trim();
-  const wpAppPassword = qs("wpAppPassword").value.trim();
-
-  if (!wpBaseUrl || !wpUser || !wpAppPassword) {
-    setStatus("Enter the WordPress URL, username, and application password.", "error");
+  const wpBaseUrl = await detectWpBaseUrl();
+  if (!wpBaseUrl) {
+    setStatus("Open Importon Bridge in the WordPress admin once so it can sync the site URL.", "error");
     return;
   }
 
@@ -163,9 +146,7 @@ async function connect() {
   try {
     const response = await chrome.runtime.sendMessage({
       cmd: "connect_bridge",
-      wpBaseUrl,
-      wpUser,
-      wpAppPassword
+      wpBaseUrl
     });
 
     if (!response?.ok) {
@@ -205,6 +186,24 @@ async function disconnect() {
   renderCategories([], 0);
 }
 
+async function detectWpBaseUrl() {
+  const [syncVals, localVals] = await Promise.all([
+    chrome.storage.sync.get(DEFAULTS),
+    chrome.storage.local.get(DEFAULTS)
+  ]);
+  const stored = normalizeBaseUrl((syncVals?.wpBaseUrl || localVals?.wpBaseUrl || ""));
+  if (stored) return stored;
+  const tabs = await chrome.tabs.query({ active: true, currentWindow: true });
+  const tab = tabs && tabs[0];
+  try {
+    const url = new URL(String(tab?.url || ""));
+    if (url.hostname) return `${url.protocol}//${url.host}`;
+  } catch {
+    // ignore
+  }
+  return "";
+}
+
 qs("themeToggle").addEventListener("click", async () => {
   const next = document.documentElement.getAttribute("data-theme") === "dark" ? "light" : "dark";
   applyTheme(next);
@@ -223,29 +222,6 @@ qs("disconnectBtn").addEventListener("click", async () => {
   await disconnect();
 });
 
-qs("refreshBtn").addEventListener("click", async () => {
-  try {
-    setStatus("Refreshing categories...", "info");
-    const response = await chrome.runtime.sendMessage({
-      cmd: "connect_bridge",
-      wpBaseUrl: normalizeBaseUrl(qs("wpBaseUrl").value),
-      wpUser: qs("wpUser").value.trim(),
-      wpAppPassword: qs("wpAppPassword").value.trim()
-    });
-    if (!response?.ok) {
-      throw new Error(response?.error || "Unable to refresh categories.");
-    }
-    await saveDraft({
-      authPassed: true,
-      cachedCategories: Array.isArray(response.categories) ? response.categories : []
-    });
-    renderCategories(response.categories || [], toPositiveInt(qs("defaultCategoryId").value));
-    setStatus("Categories refreshed.", "ok");
-  } catch (error) {
-    setStatus(String(error?.message || error), "error");
-  }
-});
-
 qs("defaultCategoryId").addEventListener("change", async () => {
   try {
     await saveDraft();
@@ -253,16 +229,6 @@ qs("defaultCategoryId").addEventListener("change", async () => {
     // ignore
   }
 });
-
-for (const id of ["wpBaseUrl", "wpUser", "wpAppPassword"]) {
-  qs(id).addEventListener("input", async () => {
-    try {
-      await saveDraft();
-    } catch {
-      // ignore
-    }
-  });
-}
 
 chrome.runtime.sendMessage({ cmd: "ensure_injected" }).catch(() => {});
 loadConnectionState().catch((error) => {

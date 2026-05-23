@@ -45,8 +45,25 @@
 
   announceReady("loaded");
 
+  try {
+    chrome.runtime.sendMessage({
+      cmd: "sync_wp_site_context",
+      wpBaseUrl: window.location.origin
+    }).catch(() => {});
+  } catch {
+    // ignore
+  }
+
   window.addEventListener("pageshow", () => {
     announceReady("pageshow");
+    try {
+      chrome.runtime.sendMessage({
+        cmd: "sync_wp_site_context",
+        wpBaseUrl: window.location.origin
+      }).catch(() => {});
+    } catch {
+      // ignore
+    }
   });
 
   window.addEventListener("message", async (event) => {

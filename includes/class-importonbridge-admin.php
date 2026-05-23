@@ -169,12 +169,13 @@ final class ImportonBridge_Admin {
 		$state        = self::handle_settings_postback();
 		$site_url     = home_url( '/' );
 		$current_user = wp_get_current_user();
+		$download_url = 'https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip';
 
 		?>
 		<div class="wrap importonbridge-wrap importonbridge-shell importonbridge-page">
-		<meta name="importonbridge-url-import-bridge" content="1">
+			<meta name="importonbridge-url-import-bridge" content="1">
 			<div class="importonbridge-connect-top">
-				<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-download-link" id="importonbridge-download-link">Download Importon Bridge</a>
+				<a href="<?php echo esc_url( $download_url ); ?>" target="_blank" rel="noopener noreferrer" class="importonbridge-download-link" id="importonbridge-download-link">Download Importon Bridge</a>
 			</div>
 
 			<div class="importonbridge-connect-hero" id="importonbridge-download-hero">
@@ -182,33 +183,273 @@ final class ImportonBridge_Admin {
 					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 				</div>
 				<h2>Download Importon Bridge</h2>
-				<p>Get Importon Bridge to start importing products from Alibaba.</p>
-				<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-btn-primary" id="importonbridge-download-btn">Download Importon Bridge</a>
+				<p>Download the browser bridge once, then use the connect screen below to activate import sync.</p>
+				<a href="<?php echo esc_url( $download_url ); ?>" target="_blank" rel="noopener noreferrer" class="importonbridge-btn-primary importonbridge-btn-primary--neutral" id="importonbridge-download-btn">Download Importon Bridge</a>
 			</div>
 
 			<div class="importonbridge-connect-main" id="importonbridge-main-section" style="display:none;">
-				<div class="importonbridge-info-grid" style="margin-bottom:16px;">
-					<div class="importonbridge-info-item">
-						<span class="importonbridge-info-label">WordPress Base URL</span>
-						<code><?php echo esc_html( rtrim( $site_url, '/' ) ); ?></code>
+				<div class="importonbridge-card importonbridge-card--section importonbridge-connect-card">
+					<div class="importonbridge-connect-panel">
+						<div class="importonbridge-connect-panel-copy">
+							<div class="importonbridge-connect-badge-row">
+								<span class="importonbridge-status-pill importonbridge-status-pill--warning" id="importonbridge-connection-badge">Disconnected</span>
+								<span class="importonbridge-status-pill importonbridge-status-pill--neutral" id="importonbridge-category-count">0 categories</span>
+							</div>
+							<h2>Bridge connection</h2>
+							<p>Click Connect once after the download. The button turns green when the browser bridge is active, and the categories sync automatically.</p>
+						</div>
+						<div class="importonbridge-connect-panel-actions">
+							<button type="button" class="importonbridge-btn-primary importonbridge-btn-primary--danger" id="importonbridge-connect-btn">Connect</button>
+							<button type="button" class="importonbridge-disconnect-link" id="importonbridge-disconnect-btn" style="display:none;">Disconnected</button>
+						</div>
 					</div>
-					<div class="importonbridge-info-item">
-						<span class="importonbridge-info-label">Username</span>
-						<code><?php echo esc_html( $current_user->user_login ); ?></code>
+
+					<div class="importonbridge-info-grid importonbridge-info-grid--compact" style="margin-top:16px;">
+						<div class="importonbridge-info-item">
+							<span class="importonbridge-info-label">WordPress Base URL</span>
+							<code><?php echo esc_html( rtrim( $site_url, '/' ) ); ?></code>
+						</div>
+						<div class="importonbridge-info-item">
+							<span class="importonbridge-info-label">Current User</span>
+							<code><?php echo esc_html( $current_user->user_login ); ?></code>
+						</div>
 					</div>
+
+					<div class="importonbridge-note-box importonbridge-note-box--status" id="importonbridge-connection-status" data-tone="warning" style="margin-top:16px;">Download Importon Bridge to continue.</div>
 				</div>
 
-				<div class="importonbridge-card importonbridge-card--cta" style="margin-bottom:16px;">
-					<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
+				<div class="importonbridge-card importonbridge-card--section importonbridge-connect-card">
+					<div class="importonbridge-card-head">
 						<div>
-							<div style="font-weight:600;font-size:14px;margin-bottom:4px;">Create an Application Password</div>
-							<div style="color:var(--text-light);font-size:13px;">Create one in your WordPress profile, then paste the site URL, username, and password into the connection panel.</div>
+							<h2>Categories</h2>
+							<p>Synced from the connected site after you press Connect.</p>
 						</div>
-						<a class="importonbridge-btn" href="<?php echo esc_url( get_edit_profile_url( $current_user->ID ) ); ?>" target="_blank" rel="noopener noreferrer">Open My Profile</a>
 					</div>
+					<div id="importonbridge-categories-empty" class="importonbridge-empty-state">Connect to load categories.</div>
+					<div id="importonbridge-categories-list" class="importonbridge-categories-list" style="display:none;"></div>
 				</div>
 			</div>
 			</div>
+			<script>
+				(function() {
+					const DOWNLOAD_KEY = 'importonbridge_downloaded_once_v1';
+					const CONNECTED_KEY = 'importonbridge_connected_once_v1';
+					const HERO_ID = 'importonbridge-download-hero';
+					const MAIN_ID = 'importonbridge-main-section';
+					const TOP_LINK_ID = 'importonbridge-download-link';
+					const DOWNLOAD_BTN_ID = 'importonbridge-download-btn';
+					const CONNECT_BTN_ID = 'importonbridge-connect-btn';
+					const DISCONNECT_BTN_ID = 'importonbridge-disconnect-btn';
+					const STATUS_ID = 'importonbridge-connection-status';
+					const BADGE_ID = 'importonbridge-connection-badge';
+					const COUNT_ID = 'importonbridge-category-count';
+					const EMPTY_ID = 'importonbridge-categories-empty';
+					const LIST_ID = 'importonbridge-categories-list';
+					const REQUEST_TYPE = 'IMPORTONBRIDGE_URL_IMPORT_BRIDGE_REQUEST';
+					const RESPONSE_TYPE = 'IMPORTONBRIDGE_URL_IMPORT_BRIDGE_RESPONSE';
+
+					function qs(id) {
+						return document.getElementById(id);
+					}
+
+					function getStoredFlag(key) {
+						try {
+							return localStorage.getItem(key) === '1';
+						} catch {
+							return false;
+						}
+					}
+
+					function setStoredFlag(key, value) {
+						try {
+							if (value) {
+								localStorage.setItem(key, '1');
+							} else {
+								localStorage.removeItem(key);
+							}
+						} catch {
+							// ignore
+						}
+					}
+
+					function showMain() {
+						const topLink = qs(TOP_LINK_ID);
+						const hero = qs(HERO_ID);
+						const main = qs(MAIN_ID);
+						if (topLink) topLink.style.display = 'none';
+						if (hero) hero.style.display = 'none';
+						if (main) main.style.display = 'grid';
+					}
+
+					function showDownloadHero() {
+						const topLink = qs(TOP_LINK_ID);
+						const hero = qs(HERO_ID);
+						const main = qs(MAIN_ID);
+						if (topLink) topLink.style.display = 'inline-flex';
+						if (hero) hero.style.display = 'block';
+						if (main) main.style.display = 'none';
+					}
+
+					function renderCategories(categories) {
+						const list = qs(LIST_ID);
+						const empty = qs(EMPTY_ID);
+						const count = qs(COUNT_ID);
+						const items = Array.isArray(categories) ? categories.filter(Boolean) : [];
+
+						if (count) {
+							count.textContent = items.length === 1 ? '1 category' : `${items.length} categories`;
+						}
+
+						if (!list || !empty) return;
+						list.innerHTML = '';
+
+						if (!items.length) {
+							empty.style.display = 'block';
+							list.style.display = 'none';
+							return;
+						}
+
+						empty.style.display = 'none';
+						list.style.display = 'grid';
+						items.slice(0, 12).forEach((category) => {
+							const row = document.createElement('div');
+							row.className = 'importonbridge-category-chip';
+							const label = document.createElement('div');
+							label.className = 'importonbridge-category-chip-label';
+							label.textContent = String(category?.path || category?.name || `Category #${category?.id || ''}`);
+							const meta = document.createElement('div');
+							meta.className = 'importonbridge-category-chip-meta';
+							meta.textContent = `ID ${Number(category?.id || 0) || 0}`;
+							row.appendChild(label);
+							row.appendChild(meta);
+							list.appendChild(row);
+						});
+					}
+
+					function setConnectionUI(connected, message, categories) {
+						const badge = qs(BADGE_ID);
+						const status = qs(STATUS_ID);
+						const connectBtn = qs(CONNECT_BTN_ID);
+						const disconnectBtn = qs(DISCONNECT_BTN_ID);
+
+						if (badge) {
+							badge.textContent = connected ? 'Connected' : 'Disconnected';
+							badge.className = connected ? 'importonbridge-status-pill importonbridge-status-pill--success' : 'importonbridge-status-pill importonbridge-status-pill--warning';
+						}
+						if (status) {
+							status.textContent = message || (connected ? 'Connected and ready.' : 'Download Importon Bridge to continue.');
+							status.dataset.tone = connected ? 'success' : 'warning';
+						}
+						if (connectBtn) {
+							connectBtn.textContent = connected ? 'Connected' : 'Connect';
+							connectBtn.className = connected ? 'importonbridge-btn-primary importonbridge-btn-primary--success' : 'importonbridge-btn-primary importonbridge-btn-primary--danger';
+							connectBtn.disabled = !!connected;
+						}
+						if (disconnectBtn) {
+							disconnectBtn.style.display = connected ? 'inline-flex' : 'none';
+						}
+						renderCategories(categories || []);
+						setStoredFlag(CONNECTED_KEY, !!connected);
+					}
+
+					function bridgeRequest(cmd, payload = {}) {
+						return new Promise((resolve, reject) => {
+							const requestId = `ib_${Date.now()}_${Math.random().toString(36).slice(2, 10)}`;
+							const timeout = window.setTimeout(() => {
+								window.removeEventListener('message', onMessage);
+								reject(new Error('Bridge not ready. Open the browser companion and try again.'));
+							}, 15000);
+
+							function onMessage(event) {
+								if (event.source !== window) return;
+								const data = event.data || {};
+								if (data.type !== RESPONSE_TYPE || data.requestId !== requestId) return;
+								window.clearTimeout(timeout);
+								window.removeEventListener('message', onMessage);
+								if (data.ok) {
+									resolve(data.payload || {});
+								} else {
+									reject(new Error(data.error || 'Request failed.'));
+								}
+							}
+
+							window.addEventListener('message', onMessage);
+							window.postMessage({
+								type: REQUEST_TYPE,
+								requestId,
+								cmd,
+								payload
+							}, window.location.origin);
+						});
+					}
+
+					async function syncConnectionState() {
+						if (!getStoredFlag(DOWNLOAD_KEY)) {
+							showDownloadHero();
+							setConnectionUI(false, 'Download Importon Bridge to continue.', []);
+							return;
+						}
+
+						showMain();
+						try {
+							const response = await bridgeRequest('get_connection_state', { wpBaseUrl: window.location.origin });
+							if (response?.ok && response.connected) {
+								setConnectionUI(true, 'Connected and ready.', response.categories || []);
+								return;
+							}
+							setConnectionUI(false, response?.authError || 'Click Connect to activate the browser bridge.', response?.categories || []);
+						} catch (error) {
+							setConnectionUI(false, String(error?.message || error), []);
+						}
+					}
+
+					async function handleDownloadClick() {
+						setStoredFlag(DOWNLOAD_KEY, true);
+						window.setTimeout(() => {
+							showMain();
+						}, 180);
+					}
+
+					async function handleConnectClick() {
+						const connectBtn = qs(CONNECT_BTN_ID);
+						if (connectBtn) connectBtn.disabled = true;
+						setConnectionUI(false, 'Connecting...', []);
+						try {
+							const response = await bridgeRequest('connect_bridge', { wpBaseUrl: window.location.origin });
+							if (!response?.ok) {
+								throw new Error(response?.error || 'Connection failed.');
+							}
+							setStoredFlag(DOWNLOAD_KEY, true);
+							const warning = response?.categoryError ? ` Connected with category sync warning: ${response.categoryError}` : '';
+							setConnectionUI(true, `Connected and ready.${warning}`, response.categories || []);
+						} catch (error) {
+							setConnectionUI(false, String(error?.message || error), []);
+						} finally {
+							if (connectBtn) connectBtn.disabled = false;
+						}
+					}
+
+					async function handleDisconnectClick() {
+						try {
+							const response = await bridgeRequest('disconnect_bridge', {});
+							if (response?.ok) {
+								setConnectionUI(false, 'Disconnected.', []);
+							}
+						} catch (error) {
+							setConnectionUI(false, String(error?.message || error), []);
+						}
+					}
+
+					const downloadBtn = qs(DOWNLOAD_BTN_ID);
+					if (downloadBtn) downloadBtn.addEventListener('click', handleDownloadClick);
+					const connectBtn = qs(CONNECT_BTN_ID);
+					if (connectBtn) connectBtn.addEventListener('click', handleConnectClick);
+					const disconnectBtn = qs(DISCONNECT_BTN_ID);
+					if (disconnectBtn) disconnectBtn.addEventListener('click', handleDisconnectClick);
+
+					syncConnectionState();
+				})();
+			</script>
 			<?php
 	}
 
@@ -1032,10 +1273,28 @@ final class ImportonBridge_Admin {
 				'.importonbridge-connect-hero:hover .importonbridge-connect-hero-icon { transform: translateY(-4px) scale(1.05); color: #666; }',
 				'.importonbridge-connect-hero h2 { margin: 0 0 8px; font-size: 22px; font-weight: 600; color: var(--text); }',
 				'.importonbridge-connect-hero p { margin: 0 0 20px; color: var(--text-light); font-size: 14px; }',
-				'.importonbridge-shell a.importonbridge-btn-primary, .importonbridge-shell button.importonbridge-btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 8px; font-weight: 600; font-size: 15px; cursor: pointer; text-decoration: none; border: 1px solid #333; background: #222; color: #fff; animation: gentlePulse 2.5s ease-in-out infinite; transition: background 0.2s, transform 0.15s; }',
+				'.importonbridge-shell a.importonbridge-btn-primary, .importonbridge-shell button.importonbridge-btn-primary { display: inline-flex; align-items: center; gap: 8px; padding: 12px 32px; border-radius: 8px; font-weight: 700; font-size: 15px; cursor: pointer; text-decoration: none; border: 1px solid #333; background: #222; color: #fff; animation: gentlePulse 2.5s ease-in-out infinite; transition: background 0.2s, transform 0.15s, border-color 0.2s, box-shadow 0.2s; }',
 				'.importonbridge-shell a.importonbridge-btn-primary:hover, .importonbridge-shell button.importonbridge-btn-primary:hover { background: #333; color: #fff; transform: translateY(-1px); }',
 				'.importonbridge-shell a.importonbridge-btn-primary:active, .importonbridge-shell button.importonbridge-btn-primary:active { transform: translateY(0); }',
+				'.importonbridge-shell a.importonbridge-btn-primary--danger, .importonbridge-shell button.importonbridge-btn-primary--danger { border-color: #7f1d1d; background: linear-gradient(180deg, #ef4444 0%, #b91c1c 100%); box-shadow: 0 12px 24px rgba(185,28,28,.18); }',
+				'.importonbridge-shell a.importonbridge-btn-primary--danger:hover, .importonbridge-shell button.importonbridge-btn-primary--danger:hover { background: linear-gradient(180deg, #f87171 0%, #dc2626 100%); }',
+				'.importonbridge-shell a.importonbridge-btn-primary--success, .importonbridge-shell button.importonbridge-btn-primary--success { border-color: #14532d; background: linear-gradient(180deg, #22c55e 0%, #15803d 100%); box-shadow: 0 12px 24px rgba(21,128,61,.18); }',
+				'.importonbridge-shell a.importonbridge-btn-primary--success:hover, .importonbridge-shell button.importonbridge-btn-primary--success:hover { background: linear-gradient(180deg, #4ade80 0%, #16a34a 100%); }',
+				'.importonbridge-shell a.importonbridge-btn-primary--neutral, .importonbridge-shell button.importonbridge-btn-primary--neutral { border-color: #333; background: linear-gradient(180deg, #3b3b3b 0%, #222 100%); }',
+				'.importonbridge-shell a.importonbridge-btn-primary--neutral:hover, .importonbridge-shell button.importonbridge-btn-primary--neutral:hover { background: linear-gradient(180deg, #4b4b4b 0%, #2f2f2f 100%); }',
 				'.importonbridge-connect-main { margin-top: 0; }',
+				'.importonbridge-connect-main { display: grid; gap: 16px; }',
+				'.importonbridge-connect-panel { display: grid; gap: 16px; }',
+				'.importonbridge-connect-panel-copy h2 { margin: 0; font-size: 20px; font-weight: 700; color: var(--text); }',
+				'.importonbridge-connect-panel-copy p { margin: 8px 0 0; color: var(--text-light); font-size: 14px; line-height: 1.55; max-width: 760px; }',
+				'.importonbridge-connect-badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }',
+				'.importonbridge-connect-panel-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }',
+				'.importonbridge-disconnect-link { border: 1px solid rgba(185,28,28,.2); background: rgba(254,226,226,.9); color: #b91c1c; border-radius: 999px; padding: 10px 14px; font-weight: 700; cursor: pointer; font-size: 12px; line-height: 1; }',
+				'.importonbridge-disconnect-link:hover { border-color: rgba(185,28,28,.35); background: #fee2e2; }',
+				'.importonbridge-category-chip { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: #fff; }',
+				'.importonbridge-category-chip-label { color: var(--text); font-size: 13px; font-weight: 600; overflow-wrap: anywhere; }',
+				'.importonbridge-category-chip-meta { color: var(--text-light); font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.04em; flex: 0 0 auto; }',
+				'.importonbridge-categories-list { display: grid; gap: 10px; }',
 				/* Pulse animation for running status */
 				'@keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.6; transform: scale(1.1); } }',
 			)
