@@ -1,4 +1,4 @@
-=== ATW — Alibaba Product Importer ===
+=== Importon Bridge ===
 Contributors: nasratulnayem
 Tags: woocommerce, import, alibaba, products, chrome extension
 Requires at least: 6.0
@@ -12,7 +12,7 @@ Import Alibaba products into WooCommerce via a Chrome extension and REST API, wi
 
 == Description ==
 
-ATW — Alibaba Product Importer connects a companion Chrome extension to your WooCommerce store. Browse any Alibaba product page, click the extension, and the product is created in WooCommerce automatically — including title, description, pricing, images, attributes, and variations.
+Importon Bridge connects a companion Chrome extension to your WooCommerce store. Browse any Alibaba product page, click the extension, and the product is created in WooCommerce automatically — including title, description, pricing, images, attributes, and variations.
 
 **Key features:**
 

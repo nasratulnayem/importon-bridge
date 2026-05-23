@@ -677,12 +677,7 @@ final class ImportonBridge_Url_Import {
 			return new WP_Error( 'importonbridge_url_import_uploads', (string) $uploads['error'] );
 		}
 
-		$base_dir     = trailingslashit( (string) $uploads['basedir'] ) . 'importon-bridge';
-		$old_base_dir = trailingslashit( (string) $uploads['basedir'] ) . 'atw-url-import';
-
-		if ( is_dir( $old_base_dir ) && ! is_dir( $base_dir ) ) {
-			rename( $old_base_dir, $base_dir );
-		}
+		$base_dir = trailingslashit( (string) $uploads['basedir'] ) . 'importon-bridge';
 
 		$runs_dir = trailingslashit( $base_dir ) . 'runs';
 		$logs_dir = trailingslashit( $base_dir ) . 'logs';

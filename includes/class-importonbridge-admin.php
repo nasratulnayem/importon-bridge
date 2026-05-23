@@ -12,25 +12,11 @@ final class ImportonBridge_Admin {
 	private static $usage_hook_suffix = '';
 
 	public static function init(): void {
-		add_action( 'admin_menu', array( __CLASS__, 'redirect_old_slugs' ), 0 );
 		add_action( 'admin_menu', array( __CLASS__, 'admin_menu' ) );
 		add_action( 'admin_enqueue_scripts', array( __CLASS__, 'enqueue_admin_assets' ) );
 		add_action( 'admin_notices', array( __CLASS__, 'maybe_show_app_passwords_notice' ) );
 		add_action( 'admin_post_importonbridge_enable_app_passwords', array( __CLASS__, 'handle_enable_app_passwords' ) );
 		add_action( 'wp_ajax_importonbridge_auto_apppass', array( __CLASS__, 'ajax_auto_apppass' ) );
-	}
-
-	public static function redirect_old_slugs(): void {
-		$old_map = array(
-			'atw-url-import' => 'importonbridge-url-import',
-			'atw-rewriter'   => 'importonbridge-rewriter',
-			'atw-usage'      => 'importonbridge-usage',
-		);
-		$page = isset( $_GET['page'] ) ? sanitize_key( $_GET['page'] ) : '';
-		if ( $page !== '' && isset( $old_map[ $page ] ) ) {
-			wp_safe_redirect( add_query_arg( 'page', $old_map[ $page ], admin_url( 'admin.php' ) ) );
-			exit;
-		}
 	}
 
 	public static function maybe_show_app_passwords_notice(): void {
