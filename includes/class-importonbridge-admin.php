@@ -176,6 +176,7 @@ final class ImportonBridge_Admin {
 			<meta name="importonbridge-url-import-bridge" content="1">
 			<div class="importonbridge-connect-top">
 				<a href="<?php echo esc_url( $download_url ); ?>" target="_blank" rel="noopener noreferrer" class="importonbridge-download-link" id="importonbridge-download-link">Download Importon Bridge</a>
+				<button type="button" class="importonbridge-btn-primary importonbridge-btn-primary--neutral" id="importonbridge-top-connect-btn">Connect</button>
 			</div>
 
 			<div class="importonbridge-connect-hero" id="importonbridge-download-hero">
@@ -196,11 +197,26 @@ final class ImportonBridge_Admin {
 								<span class="importonbridge-status-pill importonbridge-status-pill--neutral" id="importonbridge-category-count">0 categories</span>
 							</div>
 							<h2>Bridge connection</h2>
-							<p>Click Connect once after the download. The button turns green when the browser bridge is active, and the categories sync automatically.</p>
+							<p>Download the browser bridge first, then enter your WordPress URL, username, and Application Password once. After that, the connect state stays active and the middle download panel is replaced by connect controls.</p>
 						</div>
 						<div class="importonbridge-connect-panel-actions">
-							<button type="button" class="importonbridge-btn-primary importonbridge-btn-primary--danger" id="importonbridge-connect-btn">Connect</button>
+							<button type="button" class="importonbridge-btn-primary importonbridge-btn-primary--neutral" id="importonbridge-connect-btn">Connect</button>
 							<button type="button" class="importonbridge-disconnect-link" id="importonbridge-disconnect-btn" style="display:none;">Disconnected</button>
+						</div>
+					</div>
+
+					<div class="importonbridge-field-grid" style="margin-top:16px;">
+						<div class="importonbridge-field">
+							<label for="importonbridge-site-url">WordPress Base URL</label>
+							<input id="importonbridge-site-url" type="url" value="<?php echo esc_attr( rtrim( $site_url, '/' ) ); ?>" placeholder="https://example.com">
+						</div>
+						<div class="importonbridge-field">
+							<label for="importonbridge-site-user">Username</label>
+							<input id="importonbridge-site-user" type="text" value="<?php echo esc_attr( $current_user->user_login ); ?>" placeholder="admin">
+						</div>
+						<div class="importonbridge-field">
+							<label for="importonbridge-site-password">Application Password</label>
+							<input id="importonbridge-site-password" type="password" value="" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx">
 						</div>
 					</div>
 
@@ -237,9 +253,13 @@ final class ImportonBridge_Admin {
 					const HERO_ID = 'importonbridge-download-hero';
 					const MAIN_ID = 'importonbridge-main-section';
 					const TOP_LINK_ID = 'importonbridge-download-link';
+					const TOP_CONNECT_BTN_ID = 'importonbridge-top-connect-btn';
 					const DOWNLOAD_BTN_ID = 'importonbridge-download-btn';
 					const CONNECT_BTN_ID = 'importonbridge-connect-btn';
 					const DISCONNECT_BTN_ID = 'importonbridge-disconnect-btn';
+					const SITE_URL_ID = 'importonbridge-site-url';
+					const SITE_USER_ID = 'importonbridge-site-user';
+					const SITE_PASSWORD_ID = 'importonbridge-site-password';
 					const STATUS_ID = 'importonbridge-connection-status';
 					const BADGE_ID = 'importonbridge-connection-badge';
 					const COUNT_ID = 'importonbridge-category-count';
@@ -274,18 +294,22 @@ final class ImportonBridge_Admin {
 
 					function showMain() {
 						const topLink = qs(TOP_LINK_ID);
+						const topConnect = qs(TOP_CONNECT_BTN_ID);
 						const hero = qs(HERO_ID);
 						const main = qs(MAIN_ID);
 						if (topLink) topLink.style.display = 'none';
+						if (topConnect) topConnect.style.display = 'inline-flex';
 						if (hero) hero.style.display = 'none';
 						if (main) main.style.display = 'grid';
 					}
 
 					function showDownloadHero() {
 						const topLink = qs(TOP_LINK_ID);
+						const topConnect = qs(TOP_CONNECT_BTN_ID);
 						const hero = qs(HERO_ID);
 						const main = qs(MAIN_ID);
 						if (topLink) topLink.style.display = 'inline-flex';
+						if (topConnect) topConnect.style.display = 'inline-flex';
 						if (hero) hero.style.display = 'block';
 						if (main) main.style.display = 'none';
 					}
@@ -329,12 +353,18 @@ final class ImportonBridge_Admin {
 					function setConnectionUI(connected, message, categories) {
 						const badge = qs(BADGE_ID);
 						const status = qs(STATUS_ID);
+						const topConnectBtn = qs(TOP_CONNECT_BTN_ID);
 						const connectBtn = qs(CONNECT_BTN_ID);
 						const disconnectBtn = qs(DISCONNECT_BTN_ID);
 
 						if (badge) {
 							badge.textContent = connected ? 'Connected' : 'Disconnected';
 							badge.className = connected ? 'importonbridge-status-pill importonbridge-status-pill--success' : 'importonbridge-status-pill importonbridge-status-pill--warning';
+						}
+						if (topConnectBtn) {
+							topConnectBtn.textContent = connected ? 'Connected' : 'Connect';
+							topConnectBtn.className = connected ? 'importonbridge-btn-primary importonbridge-btn-primary--success' : 'importonbridge-btn-primary importonbridge-btn-primary--neutral';
+							topConnectBtn.disabled = !!connected;
 						}
 						if (status) {
 							status.textContent = message || (connected ? 'Connected and ready.' : 'Download Importon Bridge to continue.');
@@ -410,12 +440,28 @@ final class ImportonBridge_Admin {
 						}, 180);
 					}
 
+					function getConnectPayload() {
+						const wpBaseUrl = qs(SITE_URL_ID)?.value ? String(qs(SITE_URL_ID).value).trim().replace(/\/+$/, '') : window.location.origin;
+						const wpUser = qs(SITE_USER_ID)?.value ? String(qs(SITE_USER_ID).value).trim() : '';
+						const wpAppPassword = qs(SITE_PASSWORD_ID)?.value ? String(qs(SITE_PASSWORD_ID).value).trim() : '';
+						return { wpBaseUrl, wpUser, wpAppPassword };
+					}
+
 					async function handleConnectClick() {
 						const connectBtn = qs(CONNECT_BTN_ID);
 						if (connectBtn) connectBtn.disabled = true;
+						if (!getStoredFlag(DOWNLOAD_KEY)) {
+							showDownloadHero();
+							setConnectionUI(false, 'Download Importon Bridge first, then use Connect.', []);
+							if (connectBtn) connectBtn.disabled = false;
+							return;
+						}
+
+						showMain();
 						setConnectionUI(false, 'Connecting...', []);
 						try {
-							const response = await bridgeRequest('connect_bridge', { wpBaseUrl: window.location.origin });
+							const payload = getConnectPayload();
+							const response = await bridgeRequest('connect_bridge', payload);
 							if (!response?.ok) {
 								throw new Error(response?.error || 'Connection failed.');
 							}
@@ -442,6 +488,8 @@ final class ImportonBridge_Admin {
 
 					const downloadBtn = qs(DOWNLOAD_BTN_ID);
 					if (downloadBtn) downloadBtn.addEventListener('click', handleDownloadClick);
+					const topConnectBtn = qs(TOP_CONNECT_BTN_ID);
+					if (topConnectBtn) topConnectBtn.addEventListener('click', handleConnectClick);
 					const connectBtn = qs(CONNECT_BTN_ID);
 					if (connectBtn) connectBtn.addEventListener('click', handleConnectClick);
 					const disconnectBtn = qs(DISCONNECT_BTN_ID);
@@ -1242,9 +1290,9 @@ final class ImportonBridge_Admin {
 				/* Large Desktop - 1200px+ */
 				'@media (min-width: 1200px) { .importonbridge-grid--import { grid-template-columns: 1fr 360px; } }',
 				/* Tablet - 1080px */
-				'@media (max-width: 1080px) { .importonbridge-overview-grid, .importonbridge-panel-grid, .importonbridge-grid--tables, .importonbridge-grid--import, .importonbridge-hero, .importonbridge-ai-summary { grid-template-columns: 1fr; } .importonbridge-ai-summary { grid-template-columns: repeat(2, 1fr); } .importonbridge-ai-summary-item { border-right: 0; border-bottom: 1px solid var(--border); } .importonbridge-ai-summary-item:nth-last-child(-n+2) { border-bottom: 0; } .importonbridge-hero--settings .importonbridge-hero-side { justify-content: flex-start; } .importonbridge-hero-actions { justify-content: flex-start; } .importonbridge-grid--import { grid-template-columns: 1fr; } }',
+				'@media (max-width: 1080px) { .importonbridge-overview-grid, .importonbridge-panel-grid, .importonbridge-grid--tables, .importonbridge-grid--import, .importonbridge-hero, .importonbridge-ai-summary, .importonbridge-field-grid { grid-template-columns: 1fr; } .importonbridge-ai-summary { grid-template-columns: repeat(2, 1fr); } .importonbridge-ai-summary-item { border-right: 0; border-bottom: 1px solid var(--border); } .importonbridge-ai-summary-item:nth-last-child(-n+2) { border-bottom: 0; } .importonbridge-hero--settings .importonbridge-hero-side { justify-content: flex-start; } .importonbridge-hero-actions { justify-content: flex-start; } .importonbridge-grid--import { grid-template-columns: 1fr; } }',
 				/* Small Tablet / Large Mobile - 782px */
-				'@media (max-width: 782px) { .importonbridge-wrap { margin: 12px auto; padding-bottom: 100px; } .importonbridge-wrap.importonbridge-shell { padding-right: 8px; padding-left: 8px; } .importonbridge-card { padding: 16px; } .importonbridge-hero { padding: 16px; border-radius: 8px; grid-template-columns: 1fr; gap: 12px; } .importonbridge-hero-copy h1 { font-size: 18px; } .importonbridge-hero-copy p { font-size: 12px; } .importonbridge-hero-side { width: 100%; } .importonbridge-hero-side .importonbridge-btn { width: 100%; justify-content: center; } .importonbridge-kv, .importonbridge-form, .importonbridge-form-inline, .importonbridge-info-grid { grid-template-columns: 1fr; } .importonbridge-k { padding-top: 0; font-size: 14px; } .importonbridge-btn, .importonbridge-copy, .importonbridge-ghost-btn { width: 100%; justify-content: center; } .importonbridge-btn-row { display: grid; grid-template-columns: 1fr; gap: 8px; } .importonbridge-pass-row { align-items: stretch; flex-direction: column; } .importonbridge-pass code { width: 100%; } .importonbridge-ai-summary { grid-template-columns: 1fr 1fr; } .importonbridge-form-inline { grid-template-columns: 1fr; } .importonbridge-field-actions { width: 100%; } .importonbridge-btn-row .importonbridge-btn { width: 100%; } }',
+				'@media (max-width: 782px) { .importonbridge-wrap { margin: 12px auto; padding-bottom: 100px; } .importonbridge-wrap.importonbridge-shell { padding-right: 8px; padding-left: 8px; } .importonbridge-card { padding: 16px; } .importonbridge-hero { padding: 16px; border-radius: 8px; grid-template-columns: 1fr; gap: 12px; } .importonbridge-hero-copy h1 { font-size: 18px; } .importonbridge-hero-copy p { font-size: 12px; } .importonbridge-hero-side { width: 100%; } .importonbridge-hero-side .importonbridge-btn { width: 100%; justify-content: center; } .importonbridge-kv, .importonbridge-form, .importonbridge-form-inline, .importonbridge-info-grid, .importonbridge-field-grid { grid-template-columns: 1fr; } .importonbridge-k { padding-top: 0; font-size: 14px; } .importonbridge-btn, .importonbridge-copy, .importonbridge-ghost-btn { width: 100%; justify-content: center; } .importonbridge-btn-row { display: grid; grid-template-columns: 1fr; gap: 8px; } .importonbridge-pass-row { align-items: stretch; flex-direction: column; } .importonbridge-pass code { width: 100%; } .importonbridge-ai-summary { grid-template-columns: 1fr 1fr; } .importonbridge-form-inline { grid-template-columns: 1fr; } .importonbridge-field-actions { width: 100%; } .importonbridge-btn-row .importonbridge-btn { width: 100%; } }',
 				/* Mobile - 480px */
 				'@media (max-width: 480px) { .importonbridge-wrap { margin: 8px auto; padding-bottom: 80px; } .importonbridge-hero { padding: 14px; } .importonbridge-hero-copy h1 { font-size: 16px; } .importonbridge-card { padding: 12px; border-radius: 6px; } .importonbridge-card-head { flex-direction: column; gap: 8px; } .importonbridge-card-head h2 { font-size: 14px; } .importonbridge-card-head p { font-size: 12px; } .importonbridge-ai-summary { grid-template-columns: 1fr; } .importonbridge-ai-summary-item { padding: 10px 12px; } .importonbridge-ai-summary-label { font-size: 9px; } .importonbridge-ai-summary-value { font-size: 13px; } .importonbridge-accordion summary { padding: 12px; flex-wrap: wrap; } .importonbridge-accordion-title { font-size: 13px; } .importonbridge-accordion-meta { font-size: 11px; width: 100%; } .importonbridge-kv { grid-template-columns: 1fr; gap: 8px; } .importonbridge-v { width: 100%; } .importonbridge-form { grid-template-columns: 1fr; } .importonbridge-status-pill { font-size: 10px; padding: 3px 8px; } .importonbridge-stat { padding: 10px; } .importonbridge-stat-label { font-size: 10px; } .importonbridge-stat-value { font-size: 20px; } .importonbridge-table-wrap { font-size: 12px; } .importonbridge-table th, .importonbridge-table td { padding: 8px; } .importonbridge-field input, .importonbridge-field textarea, .importonbridge-field select, .importonbridge-v input, .importonbridge-v textarea { font-size: 13px; padding: 8px 10px; } .importonbridge-field-help { font-size: 11px; } .importonbridge-btn, .importonbridge-copy, .importonbridge-ghost-btn { font-size: 12px; padding: 10px 12px; min-height: 40px; } .importonbridge-note-box { padding: 10px; font-size: 12px; } .importonbridge-help-tooltip { width: 200px; font-size: 11px; } }',
 				/* Fix WordPress admin footer overlap */
@@ -1263,7 +1311,7 @@ final class ImportonBridge_Admin {
 				'@media (min-width: 1080px) { .importonbridge-stats-row { grid-template-columns: repeat(4, 1fr); } }',
 				'@media (max-width: 480px) { .importonbridge-stats-row .importonbridge-stat-box { padding: 12px; } .importonbridge-stats-row .importonbridge-stat-box > div:first-child { font-size: 10px; } .importonbridge-stats-row .importonbridge-stat-box > div:last-child { font-size: 22px; } }',
 				/* Connect page */
-				'.importonbridge-connect-top { display: flex; justify-content: flex-end; margin-bottom: 12px; }',
+				'.importonbridge-connect-top { display: flex; justify-content: flex-end; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }',
 				'.importonbridge-shell a.importonbridge-download-link { font-size: 13px; font-weight: 600; color: #999; text-decoration: none; padding: 6px 12px; border: 1px solid var(--border); border-radius: 6px; background: #fff; transition: color 0.2s, border-color 0.2s, background 0.2s; }',
 				'.importonbridge-shell a.importonbridge-download-link:hover { color: #555; border-color: var(--border-strong); background: #f5f5f5; }',
 				'@keyframes fadeSlideUp { from { opacity: 0; transform: translateY(16px); } to { opacity: 1; transform: translateY(0); } }',
@@ -1289,6 +1337,7 @@ final class ImportonBridge_Admin {
 				'.importonbridge-connect-panel-copy p { margin: 8px 0 0; color: var(--text-light); font-size: 14px; line-height: 1.55; max-width: 760px; }',
 				'.importonbridge-connect-badge-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }',
 				'.importonbridge-connect-panel-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }',
+				'.importonbridge-field-grid { display: grid; gap: 12px; grid-template-columns: repeat(3, minmax(0, 1fr)); }',
 				'.importonbridge-disconnect-link { border: 1px solid rgba(185,28,28,.2); background: rgba(254,226,226,.9); color: #b91c1c; border-radius: 999px; padding: 10px 14px; font-weight: 700; cursor: pointer; font-size: 12px; line-height: 1; }',
 				'.importonbridge-disconnect-link:hover { border-color: rgba(185,28,28,.35); background: #fee2e2; }',
 				'.importonbridge-category-chip { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--border); background: #fff; }',
