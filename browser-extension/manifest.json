@@ -1,6 +1,6 @@
 {
   "manifest_version": 3,
-  "name": "Importon Bridge Extension",
+  "name": "Importon Bridge",
   "short_name": "Importon Bridge",
   "version": "0.1.0",
   "description": "Product sync extension for WooCommerce store imports from supported supplier pages.",
@@ -8,7 +8,7 @@
   "host_permissions": ["https://*.alibaba.com/*", "http://*.alibaba.com/*", "file:///*", "http://localhost/*", "http://127.0.0.1/*", "http://*/*", "https://*/*"],
   "background": { "service_worker": "src/background.js" },
   "action": {
-    "default_title": "Importon Bridge Extension",
+    "default_title": "Importon Bridge",
     "default_popup": "src/popup.html",
     "default_icon": {
       "16": "src/import.png",
@@ -16,7 +16,6 @@
       "128": "src/import.png"
     }
   },
-  "options_page": "src/options.html",
   "content_scripts": [
     {
       "matches": ["https://*.alibaba.com/*", "http://*.alibaba.com/*", "file:///*"],

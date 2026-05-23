@@ -37,7 +37,7 @@ final class ImportonBridge_Admin {
 		<div class="notice notice-warning">
 			<p>
 				<strong><?php esc_html_e( 'Importon Bridge:', 'importon-bridge' ); ?></strong>
-				<?php esc_html_e( 'Application Passwords are not yet enabled on this site. The Chrome extension will not be able to authenticate until they are enabled.', 'importon-bridge' ); ?>
+				<?php esc_html_e( 'Application Passwords are not yet enabled on this site. The browser companion will not be able to authenticate until they are enabled.', 'importon-bridge' ); ?>
 				<a href="<?php echo esc_url( $action_url ); ?>" class="button button-secondary" style="margin-left:8px;">
 					<?php esc_html_e( 'Enable Application Passwords', 'importon-bridge' ); ?>
 				</a>
@@ -174,16 +174,16 @@ final class ImportonBridge_Admin {
 		<div class="wrap importonbridge-wrap importonbridge-shell importonbridge-page">
 		<meta name="importonbridge-url-import-bridge" content="1">
 			<div class="importonbridge-connect-top">
-				<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-download-link" id="importonbridge-download-link">Download Extension</a>
+				<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-download-link" id="importonbridge-download-link">Download Importon Bridge</a>
 			</div>
 
 			<div class="importonbridge-connect-hero" id="importonbridge-download-hero">
 				<div class="importonbridge-connect-hero-icon">
 					<svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
 				</div>
-				<h2>Download the Extension</h2>
-				<p>Get the Chrome extension to start importing products from Alibaba.</p>
-				<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-btn-primary" id="importonbridge-download-btn">Download Extension</a>
+				<h2>Download Importon Bridge</h2>
+				<p>Get Importon Bridge to start importing products from Alibaba.</p>
+				<a href="https://github.com/nasratulnayem/importon-bridge/releases/download/v0.1.0/importon-bridge-extension.zip" target="_blank" rel="noopener noreferrer" class="importonbridge-btn-primary" id="importonbridge-download-btn">Download Importon Bridge</a>
 			</div>
 
 			<div class="importonbridge-connect-main" id="importonbridge-main-section" style="display:none;">
@@ -202,7 +202,7 @@ final class ImportonBridge_Admin {
 					<div style="display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;">
 						<div>
 							<div style="font-weight:600;font-size:14px;margin-bottom:4px;">Create an Application Password</div>
-							<div style="color:var(--text-light);font-size:13px;">Create one in your WordPress profile, then paste the site URL, username, and password into the extension.</div>
+							<div style="color:var(--text-light);font-size:13px;">Create one in your WordPress profile, then paste the site URL, username, and password into the connection panel.</div>
 						</div>
 						<a class="importonbridge-btn" href="<?php echo esc_url( get_edit_profile_url( $current_user->ID ) ); ?>" target="_blank" rel="noopener noreferrer">Open My Profile</a>
 					</div>
@@ -540,7 +540,7 @@ final class ImportonBridge_Admin {
 			<div class="importonbridge-hero importonbridge-hero--import">
 				<div class="importonbridge-hero-copy">
 					<h1>Batch Import from Alibaba</h1>
-					<p>Queue product-detail URLs, assign a WooCommerce category once, and let the extension run the same import flow with better visibility and retry support.</p>
+					<p>Queue product-detail URLs, assign a WooCommerce category once, and let the browser companion run the same import flow with better visibility and retry support.</p>
 				</div>
 				<div class="importonbridge-hero-side">
 					<div class="importonbridge-hero-actions">

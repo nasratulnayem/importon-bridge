@@ -1,7 +1,7 @@
 <?php
 /**
  * Plugin Name: Importon Bridge
- * Description: Import products into WooCommerce via Chrome extension + REST API.
+ * Description: Import products into WooCommerce via browser companion + REST API.
  * Version: 0.1.0
  * Author: Nasratul Nayem
  * Author URI: https://codex.nayem.dev
@@ -12,7 +12,7 @@
  * License URI: https://www.gnu.org/licenses/gpl-2.0.html
  * Text Domain: importon-bridge
  *
- * Extension-first importer (no scraping UI in admin).
+ * Browser-companion-first importer (no scraping UI in admin).
  */
 
 if ( ! defined( 'ABSPATH' ) ) {

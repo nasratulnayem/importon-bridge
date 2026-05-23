@@ -266,7 +266,7 @@ final class ImportonBridge_Rest {
 			)
 		);
 
-		// Diagnostics endpoint to help debug auth/header issues from the Chrome extension.
+		// Diagnostics endpoint to help debug auth/header issues from the browser companion.
 		// Safe by default: only accessible from localhost (127.0.0.1/::1) or admins.
 		register_rest_route(
 			'importonbridge/v1',

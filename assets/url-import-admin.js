@@ -9,11 +9,10 @@
     recentRuns: Array.isArray(cfg.recentRuns) ? cfg.recentRuns.slice() : [],
     processing: false,
     bridgeReady: false,
+    extensionState: "checking",
     requestSeq: 0,
     bridgeRequests: new Map(),
-    syncChain: Promise.resolve(),
-    pausedRunId: "",
-    pausedUrl: ""
+    syncChain: Promise.resolve()
   };
 
   const statusMap = {
@@ -116,6 +115,33 @@
     }
   }
 
+  function setExtensionStatus(message, kind = "checking") {
+    const box = el("importonbridge-url-import-extension-box");
+    const pill = el("importonbridge-url-import-extension-pill");
+    const text = el("importonbridge-url-import-extension-status");
+    const defs = {
+      checking: { tone: "neutral", label: "Checking" },
+      ready: { tone: "success", label: "Ready" },
+      incomplete: { tone: "warning", label: "Setup" },
+      mismatch: { tone: "warning", label: "Wrong Site" },
+      unavailable: { tone: "danger", label: "Disconnected" }
+    };
+    const meta = defs[kind] || defs.checking;
+
+    state.extensionState = kind;
+    if (box) {
+      box.dataset.tone = meta.tone;
+      box.classList.toggle("importonbridge-note-box--hidden", kind === "ready");
+    }
+    if (pill) {
+      pill.textContent = meta.label;
+      pill.className = `importonbridge-status-pill importonbridge-status-pill--${meta.tone}`;
+    }
+    if (text) {
+      text.textContent = String(message || "");
+    }
+  }
+
   function setLogLink(run) {
     const link = el("importonbridge-url-import-log-link");
     const url = String(run?.log_url || "").trim();
@@ -167,52 +193,29 @@
   function renderRecentRuns() {
     const body = el("importonbridge-url-import-runs-body");
     if (!state.recentRuns.length) {
-      body.innerHTML = '<div class="importonbridge-empty-state">No import runs yet.</div>';
+      body.innerHTML = '<tr><td colspan="7" class="importonbridge-empty-state">No import runs yet.</td></tr>';
       return;
     }
 
     body.innerHTML = state.recentRuns
       .map((run) => {
         const failedCount = Number(run.failed || 0);
-        const status = humanStatus(run.status);
-        const statusClass = status === "Completed" ? "importonbridge-status-success" : (status === "Failed" || status === "Completed With Errors" ? "importonbridge-status-danger" : (status === "Running" ? "importonbridge-status-running" : "importonbridge-status-pending"));
         const logCell = failedCount > 0 && run.log_url
-          ? `<a href="${escapeHtml(run.log_url)}" target="_blank" rel="noopener" class="importonbridge-log-link">View</a>`
-          : '<span style="color:#94a3b8;">—</span>';
-        const successCount = Number(run.success || 0);
-        const failedDisplay = failedCount > 0 ? `<span style="color:#dc2626;font-weight:600;">${failedCount}</span>` : "0";
-        const successDisplay = successCount > 0 ? `<span style="color:#16a34a;font-weight:600;">${successCount}</span>` : "0";
+          ? `<a href="${escapeHtml(run.log_url)}" target="_blank" rel="noopener">failed-log.txt</a>`
+          : "—";
         return [
-          "<div class=\"importonbridge-run-row\">",
-          `<div class="importonbridge-run-col importonbridge-run-id" title="${escapeHtml(run.id || "")}">${escapeHtml(run.id || "")}</div>`,
-          `<div class="importonbridge-run-col importonbridge-run-category">${escapeHtml(run.category_path || "")}</div>`,
-          `<div class="importonbridge-run-col importonbridge-run-status"><span class="importonbridge-status-badge ${statusClass}">${status}</span></div>`,
-          `<div class="importonbridge-run-col importonbridge-run-total">${escapeHtml(run.total || 0)}</div>`,
-          `<div class="importonbridge-run-col importonbridge-run-success">${successDisplay}</div>`,
-          `<div class="importonbridge-run-col importonbridge-run-failed">${failedDisplay}</div>`,
-          `<div class="importonbridge-run-col importonbridge-run-log">${logCell}</div>`,
-          "</div>"
+          "<tr>",
+          `<td data-label="Run">${escapeHtml(run.id || "")}</td>`,
+          `<td data-label="Category">${escapeHtml(run.category_path || "")}</td>`,
+          `<td data-label="Status">${escapeHtml(humanStatus(run.status))}</td>`,
+          `<td data-label="Total">${escapeHtml(run.total || 0)}</td>`,
+          `<td data-label="Success">${escapeHtml(run.success || 0)}</td>`,
+          `<td data-label="Failed">${escapeHtml(run.failed || 0)}</td>`,
+          `<td data-label="Log">${logCell}</td>`,
+          "</tr>"
         ].join("");
       })
       .join("");
-  }
-
-  function statusDotColor(status) {
-    const s = String(status || "").trim();
-    if (s === "completed") return "#16a34a";
-    if (s === "completed_with_errors") return "#d97706";
-    if (s === "running") return "#2563eb";
-    if (s === "failed" || s === "stopped") return "#dc2626";
-    return "#94a3b8";
-  }
-
-  function statusTextColor(status) {
-    const s = String(status || "").trim();
-    if (s === "completed") return "#16a34a";
-    if (s === "completed_with_errors") return "#d97706";
-    if (s === "running") return "#2563eb";
-    if (s === "failed" || s === "stopped") return "#dc2626";
-    return "#64748b";
   }
 
   function renderRun(run) {
@@ -221,17 +224,8 @@
     const success = Number(run?.success || 0);
     const failed = Number(run?.failed || 0);
     const pct = total > 0 ? Math.max(0, Math.min(100, Math.round((processed / total) * 100))) : 0;
-    const statusStr = humanStatus(run?.status);
-    const statusKey = String(run?.status || "").trim();
-    const dotColor = statusDotColor(statusKey);
-    const txtColor = statusTextColor(statusKey);
 
-    const statusEl = el("importonbridge-run-status");
-    if (statusEl) {
-      statusEl.style.color = txtColor;
-      statusEl.innerHTML = '<span style="width:8px;height:8px;background:' + dotColor + ';border-radius:50%;display:inline-block;"></span> ' + statusStr;
-    }
-
+    el("importonbridge-run-status").textContent = humanStatus(run?.status);
     el("importonbridge-run-total").textContent = String(total);
     el("importonbridge-run-processed").textContent = String(processed);
     el("importonbridge-run-success").textContent = String(success);
@@ -268,7 +262,7 @@
       const requestId = `importonbridge_bridge_${Date.now()}_${++state.requestSeq}`;
       const timer = window.setTimeout(() => {
         state.bridgeRequests.delete(requestId);
-        reject(new Error("Importon Bridge extension did not respond. Make sure it is installed, enabled, and allowed on this site."));
+        reject(new Error("Importon Bridge did not respond. Make sure it is installed, enabled, and allowed on this site."));
       }, timeoutMs);
 
       state.bridgeRequests.set(requestId, { resolve, reject, timer });
@@ -297,7 +291,7 @@
       if (isInvalidatedBridgeError(data?.error)) {
         state.bridgeReady = false;
       }
-      request.reject(new Error(data?.error || "Importon Bridge extension request failed."));
+      request.reject(new Error(data?.error || "Importon Bridge request failed."));
       return;
     }
 
@@ -371,42 +365,10 @@
         state: "error",
         message: payload?.error || "Batch import failed."
       };
-    } else if (progressState === "paused") {
-      state.processing = false;
-      state.pausedRunId = runId;
-      state.pausedUrl = payload?.url || "";
-      event = {
-        type: "state",
-        state: "paused",
-        message: payload?.message || "Robot verification required. Solve it in the opened tab, then click Resume."
-      };
-      updateResumeButton(true);
-    } else if (progressState === "running") {
-      state.processing = true;
-      state.pausedRunId = "";
-      state.pausedUrl = "";
-      event = {
-        type: "state",
-        state: "running",
-        message: payload?.message || "Resumed..."
-      };
-      updateResumeButton(false);
     }
 
     if (event) {
       queueRunEvent(runId, event);
-    }
-  }
-
-  function updateResumeButton(paused) {
-    if (!startBtn) return;
-    if (paused) {
-      startBtn.textContent = "Resume";
-      startBtn.disabled = false;
-      startBtn.dataset.resumeRunId = state.pausedRunId || "";
-    } else {
-      startBtn.textContent = "Start Import";
-      delete startBtn.dataset.resumeRunId;
     }
   }
 
@@ -415,6 +377,11 @@
     const data = evt.data || {};
     if (data?.type === "IMPORTONBRIDGE_URL_IMPORT_BRIDGE_READY") {
       state.bridgeReady = true;
+      if (state.extensionState !== "ready") {
+        window.setTimeout(() => {
+          updateExtensionStatus({ attempts: 2, delayMs: 400 });
+        }, 120);
+      }
       return;
     }
     if (data?.type === "IMPORTONBRIDGE_URL_IMPORT_BRIDGE_RESPONSE") {
@@ -426,7 +393,74 @@
     }
   });
 
+  async function updateExtensionStatus({ attempts = 4, delayMs = 700 } = {}) {
+    setExtensionStatus("Checking the Importon Bridge connection on this admin tab...", "checking");
+
+    let lastError = null;
+    for (let attempt = 1; attempt <= attempts; attempt += 1) {
+      try {
+        const status = await bridgeRequest("get_url_import_bridge_status", {}, 5000);
+        state.bridgeReady = true;
+        const configured = !!status?.configured;
+        const savedBase = String(status?.wpBaseUrl || "").trim();
+        const currentBase = String(cfg.siteBaseUrl || "").replace(/\/+$/, "");
+        if (!configured) {
+          setExtensionStatus(
+            "Importon Bridge is detected, but the saved WordPress credentials are incomplete. Open Importon Bridge settings and save the site URL, username, and Application Password.",
+            "incomplete"
+          );
+          return false;
+        }
+        if (savedBase && savedBase !== currentBase) {
+          setExtensionStatus(
+            `Importon Bridge is detected, but the saved site is ${savedBase} while this dashboard is ${currentBase}. Update the connection before starting the batch.`,
+            "mismatch"
+          );
+          return false;
+        }
+        if (!status?.authOk) {
+          const reason = status?.authError ? ` (${status.authError})` : "";
+          setExtensionStatus(
+            `Importon Bridge credentials failed authentication${reason}. Open Importon Bridge settings, re-enter the Application Password, then click Test Connection to save.`,
+            "auth_failed"
+          );
+          return false;
+        }
+        setExtensionStatus("Importon Bridge detected and ready.", "ready");
+        return true;
+      } catch (error) {
+        lastError = error;
+        if (isInvalidatedBridgeError(error)) {
+          state.bridgeReady = false;
+        }
+        if (attempt < attempts) {
+          await new Promise((resolve) => window.setTimeout(resolve, delayMs));
+        }
+      }
+    }
+
+    const fallback = isInvalidatedBridgeError(lastError)
+      ? "The Importon Bridge connection was reloaded or updated after this admin tab was opened. Click Refresh Status, or reload this wp-admin tab once to reconnect."
+      : !state.bridgeReady
+      ? "The Importon Bridge connection is not loaded on this admin tab yet. Click Refresh Status, open Importon Bridge once on this tab, or reload the page."
+      : String(lastError?.message || lastError || "Importon Bridge is unavailable on this admin page.");
+    setExtensionStatus(fallback, "unavailable");
+    return false;
+  }
+
+  async function ensureExtensionReady() {
+    if (state.extensionState === "ready") {
+      return true;
+    }
+    return updateExtensionStatus({ attempts: 3, delayMs: 600 });
+  }
+
   async function startBatch(urls, categoryId, sourceRunId = "") {
+    const extensionReady = await ensureExtensionReady();
+    if (!extensionReady) {
+      throw new Error("The Importon Bridge connection is not ready on this admin tab. Refresh the status, then try again.");
+    }
+
     const created = await ajax("importonbridge_url_import_create_run", {
       urls: urls.join("\n"),
       category_id: String(categoryId),
@@ -449,7 +483,7 @@
       );
 
       if (!res?.ok) {
-        throw new Error(res?.error || "Extension rejected the batch import request.");
+        throw new Error(res?.error || "Importon Bridge rejected the batch import request.");
       }
     } catch (error) {
       await queueRunEvent(state.currentRun?.id || "", {
@@ -461,20 +495,6 @@
   }
 
   startBtn.addEventListener("click", async () => {
-    const resumeRunId = startBtn.dataset.resumeRunId || "";
-    if (resumeRunId) {
-      try {
-        startBtn.disabled = true;
-        startBtn.textContent = "Resuming...";
-        await bridgeRequest("resume_url_import_batch", { runId: resumeRunId }, 5000);
-      } catch (error) {
-        startBtn.textContent = "Resume";
-        startBtn.disabled = false;
-        el("importonbridge-run-message").textContent = String(error?.message || "Failed to resume.");
-      }
-      return;
-    }
-
     const urls = normalizeUrls(el("importonbridge-url-import-urls").value);
     const categoryId = Number(el("importonbridge-url-import-category").value || 0);
 
@@ -514,6 +534,11 @@
     }
   });
 
+  el("importonbridge-url-import-extension-refresh")?.addEventListener("click", async () => {
+    await updateExtensionStatus({ attempts: 3, delayMs: 500 });
+  });
+
+
   clearRunsBtn?.addEventListener("click", async () => {
     if (state.processing || !state.recentRuns.length) {
       return;
@@ -533,7 +558,14 @@
     }
   });
 
+  document.addEventListener("visibilitychange", () => {
+    if (!document.hidden) {
+      updateExtensionStatus({ attempts: 2, delayMs: 400 }).catch(() => {});
+    }
+  });
+
   renderCategories();
   renderRun(state.currentRun);
   refreshRecentRuns();
+  updateExtensionStatus().catch(() => {});
 })();

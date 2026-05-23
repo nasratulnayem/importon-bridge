@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Importon Bridge</title>
+    <link rel="stylesheet" href="popup.css" />
+  </head>
+  <body data-state="disconnected">
+    <header class="hdr">
+      <div class="brand">
+        <img src="import.png" alt="Importon Bridge" class="logo-icon" />
+        <div>
+          <div class="logo">Importon Bridge</div>
+          <div class="sub">WordPress connection</div>
+        </div>
+      </div>
+      <button id="themeToggle" class="theme-toggle" type="button" aria-label="Toggle theme" title="Toggle theme">Dark</button>
+    </header>
+
+    <main class="wrap">
+      <section class="card hero">
+        <div class="hero-head">
+          <span id="connectionBadge" class="badge badge--warn">Disconnected</span>
+          <button id="disconnectBtn" class="link-btn link-btn--danger hidden" type="button">Disconnect</button>
+        </div>
+
+        <p id="connectionCopy" class="copy">Connect once to activate imports and category sync.</p>
+
+        <div id="connectionForm" class="form">
+          <div class="field">
+            <label class="label" for="wpBaseUrl">WordPress Base URL</label>
+            <input id="wpBaseUrl" class="input" type="url" placeholder="https://example.com" />
+          </div>
+
+          <div class="two-col">
+            <div class="field">
+              <label class="label" for="wpUser">Username</label>
+              <input id="wpUser" class="input" type="text" placeholder="admin" />
+            </div>
+            <div class="field">
+              <label class="label" for="wpAppPassword">Application Password</label>
+              <input id="wpAppPassword" class="input" type="password" placeholder="xxxx xxxx xxxx xxxx xxxx xxxx" />
+            </div>
+          </div>
+        </div>
+
+        <div class="actions">
+          <button id="connectBtn" class="btn btn--danger" type="button">Connect</button>
+          <button id="refreshBtn" class="btn btn--ghost hidden" type="button">Refresh categories</button>
+        </div>
+
+        <div id="status" class="status" aria-live="polite"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-head">
+          <div class="card-title">Categories</div>
+          <div id="catStatus" class="mini-status" aria-live="polite"></div>
+        </div>
+
+        <div class="field">
+          <label class="label" for="defaultCategoryId">Default category</label>
+          <div class="select-wrap">
+            <select id="defaultCategoryId" class="input input--select">
+              <option value="">Connect to load categories</option>
+            </select>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <script src="popup.js"></script>
+  </body>
+</html>

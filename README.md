@@ -1,12 +1,11 @@
 # Importon Bridge
 
+Importon Bridge connects a browser companion to WooCommerce so you can import products from Alibaba-style product pages into WordPress with one workflow.
+
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue?logo=wordpress)](https://wordpress.org)
 [![WooCommerce](https://img.shields.io/badge/WooCommerce-8.0%2B-purple?logo=woocommerce)](https://woocommerce.com)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-777BB4?logo=php)](https://php.net)
 [![License](https://img.shields.io/badge/License-GPLv2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
-[![Version](https://img.shields.io/badge/Version-0.1.0-orange)](https://github.com/nasratulnayem/importon-bridge/releases/latest)
-
-Importon Bridge connects a browser companion to WooCommerce so you can import products from Alibaba-style product pages into WordPress with one workflow.
 
 ## Overview
 
@@ -109,7 +108,7 @@ importon-bridge/
 ### 0.1.0
 
 - Initial release
-- Browser companion product import flow
+- browser companion product import flow
 - WooCommerce product creation and updates
 - Optional AI rewriting
 - Batch URL import queue
