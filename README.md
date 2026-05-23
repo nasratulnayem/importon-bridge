@@ -1,18 +1,19 @@
 # Importon Bridge
 
-Importon Bridge connects a Chrome extension to WooCommerce so you can import products from Alibaba-style product pages into WordPress with one workflow.
-
 [![WordPress](https://img.shields.io/badge/WordPress-6.0%2B-blue?logo=wordpress)](https://wordpress.org)
 [![WooCommerce](https://img.shields.io/badge/WooCommerce-8.0%2B-purple?logo=woocommerce)](https://woocommerce.com)
 [![PHP](https://img.shields.io/badge/PHP-7.4%2B-777BB4?logo=php)](https://php.net)
 [![License](https://img.shields.io/badge/License-GPLv2%2B-green)](https://www.gnu.org/licenses/gpl-2.0.html)
+[![Version](https://img.shields.io/badge/Version-0.1.0-orange)](https://github.com/nasratulnayem/importon-bridge/releases/latest)
+
+Importon Bridge connects a browser companion to WooCommerce so you can import products from Alibaba-style product pages into WordPress with one workflow.
 
 ## Overview
 
 Importon Bridge is built for stores that want a simple, repeatable import workflow:
 
 - a WordPress admin screen for setup and monitoring
-- a Chrome extension for capturing product data from the browser
+- a browser companion for capturing product data from the browser
 - a REST API for authenticated product creation and updates
 - optional AI rewriting for titles and descriptions
 - a batch URL import queue for pasting multiple product links at once
@@ -32,7 +33,7 @@ Alibaba is referenced only to describe supported product pages. Importon Bridge 
 - WordPress 6.0+
 - WooCommerce 8.0+
 - PHP 7.4+
-- Google Chrome or Chromium-based browser for the extension
+- Google Chrome or Chromium-based browser for the browser companion
 
 ## Installation
 
@@ -40,13 +41,13 @@ Alibaba is referenced only to describe supported product pages. Importon Bridge 
 2. Upload the plugin to `/wp-content/plugins/` and activate it.
 3. Make sure WooCommerce is installed and active.
 4. Open **Importon Bridge** in the WordPress admin.
-5. Download the Chrome extension from the plugin settings page and load it in Chrome.
-6. Create a WordPress Application Password from your user profile and paste it into the extension together with your site URL and username.
+5. Download the browser companion from the plugin settings page and load it in Chrome.
+6. Create a WordPress Application Password from your user profile and paste it into the connection panel together with your site URL and username.
 
 ## Plugin Workflow
 
 1. Open an Alibaba product page in Chrome.
-2. Use the Importon Bridge extension to capture the product data.
+2. Use Importon Bridge to capture the product data.
 3. Send the data to WordPress through the authenticated REST API.
 4. Create or update the WooCommerce product.
 5. Optionally rewrite the content with AI before saving.
@@ -60,9 +61,9 @@ The plugin exposes authenticated endpoints under `importonbridge/v1`.
 | `POST` | `/wp-json/importonbridge/v1/import` | Create or update a WooCommerce product |
 | `GET` | `/wp-json/importonbridge/v1/ping` | Confirm authentication |
 | `GET` | `/wp-json/importonbridge/v1/categories` | List WooCommerce product categories |
-| `GET` | `/wp-json/importonbridge/v1/settings` | Read extension settings |
-| `POST` | `/wp-json/importonbridge/v1/settings` | Save extension settings |
-| `POST` | `/wp-json/importonbridge/v1/connect` | Return connection details for the browser extension |
+| `GET` | `/wp-json/importonbridge/v1/settings` | Read connection settings |
+| `POST` | `/wp-json/importonbridge/v1/settings` | Save connection settings |
+| `POST` | `/wp-json/importonbridge/v1/connect` | Return connection details for the browser companion |
 
 ## AI Rewriting
 
@@ -108,7 +109,7 @@ importon-bridge/
 ### 0.1.0
 
 - Initial release
-- Chrome extension product import flow
+- Browser companion product import flow
 - WooCommerce product creation and updates
 - Optional AI rewriting
 - Batch URL import queue
