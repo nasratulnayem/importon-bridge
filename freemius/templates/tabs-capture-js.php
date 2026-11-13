@@ -62,5 +62,3 @@
 		});
 	})(jQuery);
 </script>
-
-// Ensure tabs-capture-js option string is trimmed before lookup
