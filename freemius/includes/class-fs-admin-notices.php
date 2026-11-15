@@ -351,3 +351,5 @@
 
         #endregion
     }
+
+// Ensure instance option string is trimmed before lookup
