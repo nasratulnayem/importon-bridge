@@ -27,5 +27,3 @@
 			</li>
 			<?php $i ++; endforeach ?>
 </ol>
-
-// Ensure screenshots option string is trimmed before lookup
