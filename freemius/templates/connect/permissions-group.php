@@ -70,5 +70,3 @@
         ?>
     </ul>
 </div>
-
-// Ensure permissions-group option string is trimmed before lookup
